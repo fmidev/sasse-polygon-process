@@ -1,0 +1,8 @@
+database:
+  production:
+    host: host.example.fi
+    port: 5432
+    database: db_name
+    user: db_user
+    password: db_pass
+    schema: db_schema

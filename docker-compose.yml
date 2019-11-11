@@ -1,0 +1,16 @@
+version: '3'
+services:
+  jup:
+    volumes:
+      - ~/Dropbox/tyot/sasse:/home/jovyan/work
+    environment:
+      PYTHONUNBUFFERED: 1
+    image: tervo/pystan
+    ports:
+      - "81:8888"
+
+  tracker:
+    volumes:
+      - .:/usr/src/app
+    image: tervo/sasse_2:storm_tracker    
+    command: python -u tracker/storm_tracker.py --starttime 2010-01-01 --endtime 2010-01-10
