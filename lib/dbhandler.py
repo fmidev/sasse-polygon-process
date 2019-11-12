@@ -98,4 +98,9 @@ class DBHandler(object):
     def _df_to_geodf(self, df):
         """ Add geometry column from wkt """
         df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(wkt.loads)
-        return gpd.GeoDataFrame(df, geometry='geom')
+        df = gpd.GeoDataFrame(df, geometry='geom')
+        # Add centroid if necessary
+        if 'centroid' not in df.columns:
+            df.loc[:, 'centroid'] =  df.loc[:,'geom'].centroid
+
+        return df

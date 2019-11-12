@@ -20,7 +20,7 @@ import geopandas as gpd
 from timepoint import TimePoint
 from stormobject import StormObject
 from dbhandler import DBHandler
-from util import speed, bearing, get_storm_id
+from util import speed, bearing
 
 
 class Tracker(object):
@@ -173,8 +173,132 @@ class Tracker(object):
         for cluster in self.current_time_point.clusters:
             logging.debug('cluster:{} conected: {}'.format(cluster.identifier, cluster.connected_clusters))
 
+    def get_nearest(self, row, df, centroids, threshold=None):
+        try:
+            nearest = df[(df.centroid == nearest_points(row.centroid, centroids)[1])].iloc[0]
+        except ValueError:
+            logging.debug('Empty geometry while finding nearest polygon!')
+            return None
 
-    def connect_polygons(self, polygons_1, polygons_2):
+        if len(nearest) < 1:
+            return None
+        elif threshold is not None:
+            distance = abs(speed(nearest, row))
+            if distance > threshold:
+                return None
+        return nearest
+
+    def get_storm_id(self, row):
+        """ Return storm id from row values """
+
+        return str(row.id) + '-' + \
+               str(row.weather_parameter) +'-' + \
+               str(row.low_limit) + '-' + \
+               str(row.high_limit)
+
+    def connect_polygons(self, current_all, prev_all):
+        """
+        For each polygon in current:
+
+        1. if pressure polygons exist withing threshold:
+              1. if pressure polygon has not id, get it from previous press
+                 polygons if exist within the threshold, else give a new id
+              2. give pressure polygon id to the polygon
+        2. else if other polygons with given id exist within the threshold:
+              1. use their id
+        3. else if previous polygons exist within the threshold:
+              1. use their id
+        4. else:
+              1. give a new id
+
+        """
+
+        # Separate wind and pressure elements
+        current = current_all[(current_all.loc[:,'weather_parameter'] != 'Pressure')]
+        prev = prev_all[(prev_all.loc[:,'weather_parameter'] != 'Pressure')]
+        current_pressure = current_all[(current_all.loc[:,'weather_parameter'] == 'Pressure')]
+        prev_pressure = prev_all[(prev_all.loc[:,'weather_parameter'] == 'Pressure')]
+
+        centroids_current = gpd.GeoSeries(current.loc[:, 'centroid']).unary_union
+        centroids_prev = gpd.GeoSeries(prev.loc[:, 'centroid']).unary_union
+        centroids_pressure_current = gpd.GeoSeries(current_pressure.loc[:, 'centroid']).unary_union
+        centroids_pressure_prev = gpd.GeoSeries(prev_pressure.loc[:, 'centroid']).unary_union
+
+        def process(row):
+            #print(row)
+            # 1. Nearby pressure object
+            nearest_pressure_current = self.get_nearest(row, current_pressure, centroids_pressure_current, self.distance_to_pressure_threshold)
+
+            if nearest_pressure_current is not None:
+                # 1.1. have id
+                if nearest_pressure_current.storm_id is not None:
+                    storm_id = nearest_pressure_current.storm_id
+                    logging.debug('Found id, case 1.1. id: {}'.format(storm_id))
+                    current_all.loc[current_all.loc[:, 'id'] == row.id, 'storm_id'] = storm_id
+                    return storm_id
+                # 1.2. previous pressure object
+                else:
+                    try:
+                        nearest_pressure_prev = self.get_nearest(row, prev_pressure, centroids_pressure_prev, self.speed_threshold['pressure'])
+                        if nearest_pressure_prev is not None:
+                            if nearest_pressure_prev.storm_id is None:
+                                logging.warning('Previous pressure polygon ({}) have not storm id. Giving a new one. This should not happen...'.format(nearest_pressure_prev.id))
+                                storm_id = self.get_storm_id(nearest_pressure_prev)
+                                current_all.loc[current_all.loc[:, 'id'] == row.id, 'storm_id'] = storm_id
+                                current_all.loc[current_all.loc[:, 'id'] == nearest_pressure_prev.id, 'storm_id'] = storm_id
+                                current_all.loc[current_all.loc[:, 'id'] == nearest_pressure_current.id, 'storm_id'] = storm_id
+                                return storm_id
+
+                            storm_id = nearest_pressure_prev.storm_id
+                            # Assign to pressure polgyons as well
+                            current_all.loc[current_all.loc[:, 'id'] == row.id, 'storm_id'] = storm_id
+                            current_all.loc[current_all.loc[:, 'id'] == nearest_pressure_current.id, 'storm_id'] = storm_id
+                            logging.debug('Found id from previous pressure polygon, case 1.1. id: {}'.format(storm_id))
+                            return storm_id
+                    except ValueError:
+                        # No previous objects, use pressure polygon to generate id
+                        storm_id = self.get_storm_id(nearest_pressure_current)
+                        current_all.loc[current_all.loc[:, 'id'] == row.id, 'storm_id'] = storm_id
+                        current_all.loc[current_all.loc[:, 'id'] == nearest_pressure_current.id, 'storm_id'] = storm_id
+                        logging.debug('Create a new id from pressure polygon, case 1.1. id: {}'.format(storm_id))
+                        pass
+
+            # 2. other polygon with id exist
+            nearest_current = self.get_nearest(row, current, centroids_current, self.speed_threshold['wind'])
+            if nearest_current is not None and nearest_current.storm_id is not None:
+                storm_id = nearest_current.storm_id
+                logging.debug('Found id from other wind polygon, case 2.1. id: {}'.format(storm_id))
+                current_all.loc[current_all.loc[:, 'id'] == row.id, 'storm_id'] = storm_id
+                if nearest_pressure_current is not None:
+                    current_all.loc[current_all.loc[:, 'id'] == nearest_pressure_current.id, 'storm_id'] = storm_id
+                return storm_id
+
+            # 3. previous polygons within the threshold
+            try:
+                nearest_previous = self.get_nearest(row, prev, centroids_prev, self.speed_threshold['wind'])
+                if nearest_previous is not None and nearest_previous.storm_id is not None:
+                    storm_id = nearest_previous.storm_id
+                    logging.debug('Found id from previous wind polygon, case 3.1. id: {}'.format(storm_id))
+                    current_all.loc[current_all.loc[:, 'id'] == row.id, 'storm_id'] = storm_id
+                    if nearest_pressure_current is not None:
+                        current_all.loc[current_all.loc[:, 'id'] == nearest_pressure_current.id, 'storm_id'] = storm_id
+                    return storm_id
+            except ValueError:
+                # No previous polygons
+                pass
+
+            # 4. create a new storm id
+            storm_id = self.get_storm_id(row)
+            logging.debug('Create a new id, case 4.1. id: {}'.format(storm_id))
+            current_all.loc[current_all.loc[:, 'id'] == row.id, 'storm_id'] = storm_id
+            if nearest_pressure_current is not None:
+                current_all.loc[current_all.loc[:, 'id'] == nearest_pressure_current.id, 'storm_id'] = storm_id
+            return storm_id
+
+        current.apply(lambda row: process(row), axis=1)
+        return current_all
+
+    def process_polygons(self, polygons_1, polygons_2):
         """
         Connect polygons and calculate trakcing parameters (speed, angle, area, area_diff)
         """
@@ -183,20 +307,12 @@ class Tracker(object):
             return polygons_1
 
         # If previous polygons are empty, all storms are new. Return a new storm id and empty tracking fields
-        # TODO should we assign storm id here or when we have it at least on two time steps?
-        if len(polygons_2) < 1:
-            polygons_1['storm_id'], polygons_1['speed'], polygons_1['angle'], \
+        if polygons_2 is None or len(polygons_2) < 1:
+            polygons_1['speed'], polygons_1['angle'], \
             polygons_1['area_m2'], polygons_1['area_diff'], \
             polygons_1['speed_pressure'], polygons_1['angle_pressure'], \
-            polygons_1['distance_to_pressure'] = None, self.missing, self.missing, self.missing, self.missing, self.missing, self.missing, self.missing
+            polygons_1['distance_to_pressure'] = self.missing, self.missing, self.missing, self.missing, self.missing, self.missing, self.missing
             return polygons_1
-
-        # Add centroid if necessary
-        if 'centroid' not in polygons_1.columns:
-            polygons_1.loc[:, 'centroid'] =  polygons_1.loc[:,'geom'].centroid
-
-        if 'centroid' not in polygons_2.columns:
-            polygons_2.loc[:, 'centroid'] =  polygons_2.loc[:,'geom'].centroid
 
         # Separate wind and pressure elements
         polygons_1_wind = polygons_1[(polygons_1.loc[:,'weather_parameter'] != 'Pressure')]
@@ -208,7 +324,6 @@ class Tracker(object):
         centroids_pressure_2 = gpd.GeoSeries(polygons_2_pressure.loc[:, 'centroid']).unary_union
 
         def near(needle_row, search_base):
-
             # Nearest pressure objects
             try:
                 nearest_pressure_1 = polygons_1_pressure[(polygons_1_pressure.centroid == nearest_points(needle_row.centroid, centroids_pressure_1)[1])].iloc[0]
@@ -265,25 +380,13 @@ class Tracker(object):
                 needle_row.geom)
             area_m2 = g.area
 
-            # Assign storm id. If set in previous polygon, use that
-            if not separate and nearest.storm_id is not None:
-                storm_id = nearest.storm_id
-                area_diff = area_m2 - nearest.area_m2
-            else:
-                storm_id = get_storm_id(needle_row)
-                area_diff = area_m2
+            if not separate: area_diff = area_m2 - nearest.area_m2
+            else: area_diff = area_m2
 
-            # Assign to pressure polgyons as well
-            if len(nearest_pressure_1) >= 1:
-                old_id = polygons_1[(polygons_1.loc[:, 'id'] == nearest_pressure_1.id)].iloc[0].storm_id
-                polygons_1.loc[polygons_1.loc[:, 'id'] == nearest_pressure_1.id, 'storm_id'] = storm_id
-                if old_id is not None and old_id != storm_id:
-                    logging.warning('Changing storm-id for polygon {} ({} -> {})'.format(nearest_pressure_1.id, old_id, storm_id))
-
-            return storm_id, speed_self, angle_self, area_m2, area_diff, speed_pressure, angle_pressure, distance_to_pressure
+            return speed_self, angle_self, area_m2, area_diff, speed_pressure, angle_pressure, distance_to_pressure
 
         # Apply to all rows in the dataframe
-        polygons_1['storm_id'], polygons_1['speed'], polygons_1['angle'], \
+        polygons_1['speed'], polygons_1['angle'], \
         polygons_1['area_m2'], polygons_1['area_diff'], polygons_1['speed_pressure'], \
         polygons_1['angle_pressure'], polygons_1['distance_to_pressure'] = zip(*polygons_1.apply(lambda row: near(row, polygons_2), axis=1))
 
@@ -328,32 +431,22 @@ class Tracker(object):
             previous_storm_objects = self.dbh.get_polygons({'time': [previous_timestamp.strftime('%Y-%m-%d %H:%M:%S')]})
             logging.debug('Found {} storm objects'.format(len(previous_storm_objects)))
 
+        # 3. DBSCAN
+        # timepoint = TimePoint(storm_objects)
+        #return
         # print(storm_objects)
         # sys.exit()
         #df = self.form_df(storm_objects)
-        storm_objects = self.connect_polygons(storm_objects, previous_storm_objects)
+
+        storm_object = self.connect_polygons(storm_objects, previous_storm_objects)
+
+        storm_objects = self.process_polygons(storm_objects, previous_storm_objects)
 
         # Keep previous storm objects in memory so we don't have to load them again
         self.previous_storm_objects = storm_objects
         self.previous_timestamp = timestamp
 
         return
-        sys.exit()
-        # # 4. identify clusters for current time point
-        # cluster_neighbourhood_limit = 2 #km
-        # cluster_min_area = 20 #km^2
-        # pixel_width = 0.25 # km  TODO: extract pixel width from geotiff
-        # neighbourhood_radius = cluster_neighbourhood_limit / float(pixel_width)
-        # area_limit = cluster_min_area / float(pixel_width**2)
-        # logging.debug("Do the DBSCAN")
-        # self.current_time_point.dbscan(
-        #     neighbourhood_radius=neighbourhood_radius, area_limit=area_limit)
-
-        # 4. set cluster connectivity
-        logging.debug("Setting cluster connectivity...")
-        previous_clusters = self.database.read_clusters(previous_timestamp)
-        if len(previous_clusters) > 0:
-            self.set_cluster_connectivity(previous_clusters, connective_overlap=self.connective_overlap)
 
         # # 5. Insert clusters into db
         # logging.debug("Insert clusters to db")

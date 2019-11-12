@@ -5,22 +5,41 @@ from stormobject import StormObject
 
 class TimePoint(object):
 
-    def __init__(self, data_array):
+    # def __init__(self, data_array):
+    #     """
+    #     Container for the data of one time point.
+    #     Parameters
+    #     ----------
+    #     data_array : nympy array
+    #     time_index : int
+    #     """
+    #     self.data_array = data_array.GetRasterBand(1).ReadAsArray()
+    #     self.dataset = data_array
+    #     self.thresholded_array = None
+    #     self.contoured_array = None
+    #     self.contours = None
+    #     self.storm_objects = []
+    #     self.clusters = []
+    #     self.timestamp = None
+    def __init__(self, df):
         """
         Container for the data of one time point.
         Parameters
         ----------
-        data_array : nympy array
+        df : pandas DataFrame
         time_index : int
         """
-        self.data_array = data_array.GetRasterBand(1).ReadAsArray()
-        self.dataset = data_array
+        #self.data_array = data_array.GetRasterBand(1).ReadAsArray()
+        self.data_array = df.loc[:, 'geom']
+        self.dataset = df
         self.thresholded_array = None
         self.contoured_array = None
         self.contours = None
         self.storm_objects = []
         self.clusters = []
         self.timestamp = None
+        self.identify_storm_objects()
+
 
     def test_polygon_distances(self):
         """test method used only in debugging
@@ -43,26 +62,26 @@ class TimePoint(object):
             neighborhood_areas_dict[str(so.identifier)] = area_sum
         return neighborhood_areas_dict
 
-    def threshold_array(self, dbz_threshold, noise_threshold):
-        """Creates a binary thresholded array.
-        """
-        img = self.data_array[:]
-        img[img == 255] = 0
-
-        offset = -32 # 8-bit
-        gain = 0.5 # 8-bit
-        threshold = (dbz_threshold - offset)/gain
-        img[img < (noise_threshold-offset)/gain] = 0
-        ret, thresholded_img = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
-
-        # Morphological closing, structuring element is 3 km x 3 km, pixel width is 0.25 km
-        #close_kernel = np.ones((6,6),np.uint8)
-        open_kernel = np.ones((3,3),np.uint8)
-        close_kernel = np.ones((12,12),np.uint8)
-
-        thresholded_img = cv2.morphologyEx(thresholded_img, cv2.MORPH_CLOSE, close_kernel)
-        thresholded_img = cv2.morphologyEx(thresholded_img, cv2.MORPH_OPEN, open_kernel)
-        self.thresholded_array = thresholded_img
+    # def threshold_array(self, dbz_threshold, noise_threshold):
+    #     """Creates a binary thresholded array.
+    #     """
+    #     img = self.data_array[:]
+    #     img[img == 255] = 0
+    #
+    #     offset = -32 # 8-bit
+    #     gain = 0.5 # 8-bit
+    #     threshold = (dbz_threshold - offset)/gain
+    #     img[img < (noise_threshold-offset)/gain] = 0
+    #     ret, thresholded_img = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
+    #
+    #     # Morphological closing, structuring element is 3 km x 3 km, pixel width is 0.25 km
+    #     #close_kernel = np.ones((6,6),np.uint8)
+    #     open_kernel = np.ones((3,3),np.uint8)
+    #     close_kernel = np.ones((12,12),np.uint8)
+    #
+    #     thresholded_img = cv2.morphologyEx(thresholded_img, cv2.MORPH_CLOSE, close_kernel)
+    #     thresholded_img = cv2.morphologyEx(thresholded_img, cv2.MORPH_OPEN, open_kernel)
+    #     self.thresholded_array = thresholded_img
 
     def identify_contours(self):
         """Gets the contours from thresholded array
@@ -78,15 +97,23 @@ class TimePoint(object):
             except Exception as e:
                 print(e)
 
+    # def identify_storm_objects(self, dbz_threshold=35, noise_threshold=8):
+    #     """
+    #     Identifies the storm objects by thresholding the image and finding
+    #     contours from it.
+    #     """
+    #     self.threshold_array(dbz_threshold, noise_threshold)
+    #     self.identify_contours()
+    #     for contour in self.contours:
+    #         self.storm_objects.append(StormObject(contour))
+
     def identify_storm_objects(self, dbz_threshold=35, noise_threshold=8):
         """
         Identifies the storm objects by thresholding the image and finding
         contours from it.
         """
-        self.threshold_array(dbz_threshold, noise_threshold)
-        self.identify_contours()
-        for contour in self.contours:
-            self.storm_objects.append(StormObject(contour))
+        for polygon in self.data_array:
+            self.storm_objects.append(StormObject(polygon))        
 
     # OLD, SLOW AND MORE GENERAL METHOD, NOT IN USE
     def polygon_border_distance(self, polygon1, polygon2):
@@ -185,7 +212,8 @@ class TimePoint(object):
                 self.clusters.append(cluster)
 
     def expand_cluster(self, storm_object, nearby_storm_objects, cluster, neighbourhood_radius, area_limit):
-        """Add storm object to cluster, called in dbscan
+        """
+        Add storm object to cluster, called in dbscan
         """
         cluster.storm_objects.append(storm_object)
         storm_object.belongs_to_cluster = True

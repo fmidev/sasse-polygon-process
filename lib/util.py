@@ -238,12 +238,3 @@ def speed(row1, row2, threshold = None, missing = None):
         dist = missing
 
     return dist
-
-
-def get_storm_id(row):
-    """ Return storm id from row values """
-
-    return str(row.id) + '-' + \
-           str(row.weather_parameter) +'-' + \
-           str(row.low_limit) + '-' + \
-           str(row.high_limit)
