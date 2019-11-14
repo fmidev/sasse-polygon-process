@@ -4,6 +4,7 @@ import argparse
 import logging
 from tracker import Tracker
 from dbhandler import DBHandler
+from smartmethandler import SmartMetHandler
 import datetime as dt
 from datetime import timedelta
 
@@ -13,7 +14,8 @@ def main():
     #logging.info("Reading input files.")
 
     dbh = DBHandler(options.db_config_filename, options.db_config_name)
-    tracker = Tracker(dbh)
+    ssh = SmartMetHandler(options.smartmet_config_filename, options.smartmet_config_name)
+    tracker = Tracker(dbh, ssh)
 
     starttime = dt.datetime.strptime(options.starttime, "%Y-%m-%d")
     endtime = dt.datetime.strptime(options.endtime, "%Y-%m-%d")
@@ -31,6 +33,8 @@ if __name__ =='__main__':
     parser.add_argument('--connective_overlap', type=float, default=0.5, help='minimum overlap between connected clusters')
     parser.add_argument('--db_config_filename', type=str, default='cnf/sasse_aws.yaml', help='CNF file containing DB connection pararemters')
     parser.add_argument('--db_config_name', type=str, default='local', help='Section name in db cnf file to read connection parameters')
+    parser.add_argument('--smartmet_config_filename', type=str, default='cnf/smartmet.yaml', help='CNF file containing SmartMet Server pararemters')
+    parser.add_argument('--smartmet_config_name', type=str, default='production', help='Section name for smartmet')
 
     if len(sys.argv) <= 1:
         parser.print_help()
@@ -39,6 +43,6 @@ if __name__ =='__main__':
     options = parser.parse_args()
 
     logging.basicConfig(format=("[%(levelname)s] %(asctime)s %(filename)s:%(funcName)s:%(lineno)s %(message)s"),
-                        level=logging.DEBUG)
+                        level=logging.INFO)
 
     main()

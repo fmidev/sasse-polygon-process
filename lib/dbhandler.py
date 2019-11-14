@@ -2,13 +2,10 @@
 """
 Database handler
 """
-import sys
-import re
-import psycopg2
-import logging
-import os
+import sys, re, psycopg2, logging, os, datetime
+from sqlalchemy import create_engine
+from sqlalchemy import exc
 import numpy as np
-import datetime
 from collections import defaultdict
 from configparser import ConfigParser
 import pandas.io.sql as sqlio
@@ -44,6 +41,7 @@ class DBHandler(object):
         else:
             raise Exception('Section {0} not found in the {1} file'.format(section, self.config_filename))
 
+        self.db_params = db
         return db
 
 
@@ -65,6 +63,55 @@ class DBHandler(object):
             sql += " AND point_in_time IN ('{}')".format(','.join(filters['time']))
 
         return self._query(sql)
+
+    def read_outages(self, starttime=None, endtime=None):
+        """
+        Read outages from database
+        """
+
+        sql = ("SELECT \"start\",\"end\",lat,lng "+
+               "FROM sasse.outages a, " +
+               "sasse.station b " +
+               "WHERE a.identifier=b.outage_identifier " +
+               "AND a.type not in ('-1', 'maintenance', 'planned')")
+
+        if starttime is not None:
+            start = starttime.strftime('%Y-%m-%d %H:%M:%S')
+            sql = sql + " AND \"start\" >= '{}'".format(start)
+        if endtime is not None:
+            end = endtime.strftime('%Y-%m-%d %H:%M:%S')
+            sql = sql + " AND \"end\" <= '{}'".format(end)
+
+        logging.debug(sql)
+        return self._query(sql)
+
+
+    def update_storm_ids(self, data):
+        """
+        Update storm ids
+
+        data : list
+               [(id, storm_id), ...]
+        """
+        if len(data) < 1:
+            return
+
+        values = []
+        for row in data:
+            values.append((row[0], row[1]))
+        values = "{}".format(values)[1:-1]
+
+
+        sql = """
+        UPDATE sasse.stormcell as m
+        SET storm_id = c.new_id
+        FROM (VALUES
+             {values}
+        ) as c(id, new_id)
+        WHERE c.id=m.id
+        """.format(values=values)
+
+        self.execute(sql)
 
     def execute(self, statement):
         """
@@ -104,3 +151,35 @@ class DBHandler(object):
             df.loc[:, 'centroid'] =  df.loc[:,'geom'].centroid
 
         return df
+
+    def update_storm_objects(self, df, params):
+        """
+        Save storm objects to the db
+
+        df : DataFrame
+             DataFrame containing polygons and their features
+        params : lst
+                 List of feature names to store (used to extract features from df)
+        """
+        #print(df)
+        self.update_storm_ids(df.loc[:,['id', 'storm_id']].fillna('NULL').values)
+
+        df.set_index('id', inplace=True)
+        features = df.loc[:, params].replace(-99, None)
+        engine = create_engine('postgresql://{user}:{passwd}@{host}:5432/{db}'.format(user=self.db_params['user'],
+                                                                                     passwd=self.db_params['password'],
+                                                                                     host=self.db_params['host'],
+                                                                                     db=self.db_params['database']))
+
+        table_name = 'stormcell_features'
+        index_name = 'polygon_id'
+        try:
+            features.to_sql(table_name, engine, schema='sasse', if_exists='append', index_label=index_name)
+        except exc.SQLAlchemyError:
+            logging.warning('Rows already exist, not updating')
+
+        with engine.connect() as con:
+            try:
+                con.execute('ALTER TABLE sasse.{} ADD PRIMARY KEY ({});'.format(table_name, index_name))
+            except exc.SQLAlchemyError:
+                pass

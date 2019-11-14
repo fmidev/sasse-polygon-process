@@ -2,7 +2,6 @@ import numpy as np
 import os, math, pyproj
 from shapely.ops import transform
 from functools import partial
-#import yaml
 
 def surrounding_indexes(pixel_coord, window, boundary):
     """ Returns the indexes of the pixels surrounding the given
@@ -195,14 +194,6 @@ def insert_array2(base_array, window, samples, accumulate=False):
                 base_array[y_min1:y_max1, x_min1:x_max1] = window[y_min2:y_max2, x_min2:x_max2]
         except:
             pass
-
-
-def load_yaml_file_as_dict(filename):
-    # Read a yaml configuration file from disk
-    with open(os.path.dirname(os.path.realpath(__file__)) + "/" + filename) as conf_file:
-            config_dict = yaml.safe_load(conf_file)
-
-    return config_dict
 
 
 def bearing(pt1, pt2):
