@@ -39,7 +39,7 @@ class SmartMetHandler(object):
 
         paramlist = ["FF-MS:ERA5:26:6:10:0"]
         paramlist = self.params_to_list()
-        url = "{host}/timeseries?format=json&param={params}&starttime={time}&endtime={time}&wkt={wkt}".format(host=self.config['host'],params=','.join(paramlist), wkt=wkt, time=time.strftime("%Y%m%dT%H%M%S"))
+        url = "{host}/timeseries?format=json&param={params}&starttime={time}&endtime={time}&wkt={wkt}".format(host=self.config['host'],params=','.join(paramlist), wkt=wkt.simplify(0.05, preserve_topology=True), time=time.strftime("%Y%m%dT%H%M%S"))
 
         response = requests.get(url)
         if response.status_code == 200:
@@ -50,7 +50,7 @@ class SmartMetHandler(object):
         met_params = {}
         for param, value in data.items():
             f = re.search('(?<=@).*(?={)', param).group()
-            p = re.search(r'(?<={).*(?=})', param).group()            
+            p = re.search(r'(?<={).*(?=})', param).group()
             met_params[f+' '+self.params[p]['name']] = value
 
         return met_params

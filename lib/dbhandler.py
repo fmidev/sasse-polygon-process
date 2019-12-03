@@ -64,25 +64,39 @@ class DBHandler(object):
 
         return self._query(sql)
 
-    def read_outages(self, starttime=None, endtime=None):
+    def get_outages(self, starttime=None, endtime=None):
         """
         Read outages from database
         """
-
-        sql = ("SELECT \"start\",\"end\",lat,lng "+
-               "FROM sasse.outages a, " +
-               "sasse.station b " +
-               "WHERE a.identifier=b.outage_identifier " +
-               "AND a.type not in ('-1', 'maintenance', 'planned')")
+        sql = """
+        SELECT
+            \"start\",\"end\",customers,date_trunc('hour', a.start AT TIME ZONE 'Europe/Helsinki' AT TIME ZONE 'UTC') + interval '1 hour' as t, ST_AsText(the_geom) as geom
+        FROM
+            sasse.outages a
+        WHERE
+            a.type not in ('-1', 'maintenance', 'planned')
+        """
 
         if starttime is not None:
             start = starttime.strftime('%Y-%m-%d %H:%M:%S')
-            sql = sql + " AND \"start\" >= '{}'".format(start)
+            sql = sql + " AND \"start\" AT TIME ZONE 'Europe/Helsinki' AT TIME ZONE 'UTC' >= '{}'".format(start)
         if endtime is not None:
             end = endtime.strftime('%Y-%m-%d %H:%M:%S')
-            sql = sql + " AND \"end\" <= '{}'".format(end)
+            sql = sql + " AND \"start\" AT TIME ZONE 'Europe/Helsinki' AT TIME ZONE 'UTC' <= '{}'".format(end)
 
-        logging.debug(sql)
+        return self._query(sql)
+
+    def get_transformers(self):
+        """
+        Read transformers from database
+        """
+        sql = """
+        SELECT
+            a.customers, st_astext(geom) as geom
+        FROM
+            sasse.transformer a
+        """
+
         return self._query(sql)
 
 
@@ -143,7 +157,9 @@ class DBHandler(object):
                     return results
 
     def _df_to_geodf(self, df):
-        """ Add geometry column from wkt """
+        """
+        Add geometry column from wkt
+        """
         df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(wkt.loads)
         df = gpd.GeoDataFrame(df, geometry='geom')
         # Add centroid if necessary
@@ -161,7 +177,6 @@ class DBHandler(object):
         params : lst
                  List of feature names to store (used to extract features from df)
         """
-        #print(df)
         self.update_storm_ids(df.loc[:,['id', 'storm_id']].fillna('NULL').values)
 
         df.set_index('id', inplace=True)

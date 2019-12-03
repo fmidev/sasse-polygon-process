@@ -29,6 +29,10 @@ class Tracker(object):
     speed_threshold = {'wind': 200, 'pressure': 45}
     distance_to_pressure_threshold = 500
     missing = -99
+    dataset = None
+    # rounded to nearest decimal so that bbox enlarges to all directions
+    loiste_bbox = [26.1,63.7,30.3,65.5]
+    sssoy_bbox = [25.5,61.0,29.6,62.5]
 
     def __init__(self, dbh, ssh, connective_overlap=.5, timestep=60):
 
@@ -47,10 +51,68 @@ class Tracker(object):
         process_polygons function and while saving the data to db.
         """
         self.polygon_params = ['speed_self', 'angle_self', 'area_m2', 'area_diff', 'speed_pressure', 'angle_pressure', 'distance_to_pressure']
+        self.meta_params = ['storm_id', 'point_in_time', 'weather_parameter', 'low_limit', 'high_limit']
+        self.label_params = ['outages', 'customers', 'transformers']
         self.meteorlogical_params = self.ssh.params_to_list(shortnames=True)
-        self.all_params = self.polygon_params + self.meteorlogical_params
-    
+        self.storm_params = self.polygon_params + self.meteorlogical_params
+        self.all_params = self.meta_params + self.storm_params + self.label_params
+
+    def create_classification_set(self, polygons, starttime, endtime):
+        """
+        Create dataset usable for classification task.
+
+         1. Read outages from db
+         2. Join polygons with outages
+         3. Drop polygons which are outside the power grids
+        """
+        polygons_loiste = polygons.cx[self.loiste_bbox[0]:self.loiste_bbox[2],
+                                      self.loiste_bbox[1]:self.loiste_bbox[3]]
+        polygons_sssoy = polygons.cx[self.sssoy_bbox[0]:self.sssoy_bbox[2],
+                                     self.sssoy_bbox[1]:self.sssoy_bbox[3]]
+
+        pols = pd.concat([polygons_loiste, polygons_sssoy]).drop_duplicates().reset_index(drop=True)
+        if len(pols) < 1:
+            return None
+
+        # Outages and customers
+        pols.loc[:, 'outages'] = 0
+        pols.loc[:, 'customers'] = 0
+
+        outages = self.dbh.get_outages(starttime, endtime)
+        if len(outages) > 0:
+            outages['t'] = pd.to_datetime(outages['t'], utc=True)
+            df_outages = gpd.sjoin(pols, outages)
+            # Outages may exist but not under storm area
+            if len(df_outages) > 0:
+                count_outages = df_outages.groupby(by=['id'])['storm_id', 'customers_right'].agg({'storm_id': 'count', 'customers_right': 'sum'}).reset_index(level=0)
+
+                # For some reason outages (stored with name storm_id) don't give value with loc
+                pols.loc[pols['id'] == count_outages['id'], 'outages'] = count_outages.iloc[:, 1]
+                pols.loc[pols['id'] == count_outages['id'], 'customers'] = count_outages.loc[:, 'customers_right']
+
+        # Transformers
+        pols.loc[:, 'transformers'] = 0
+
+        transformers = self.dbh.get_transformers()
+        if len(transformers) > 0:
+            df_transformers = gpd.sjoin(pols, transformers)
+            # Just in case. There should be always transformers, so this if should meaningless
+            if len(df_transformers) > 0:
+                count_transformers = df_transformers.groupby(by=['id'])['storm_id'].count().to_frame().reset_index(level=0)
+                pols.loc[pols['id'] == count_transformers['id'], 'transformers'] = count_transformers.iloc[:,1]
+
+        if self.dataset is None:
+            self.dataset = pols.loc[:, self.all_params]
+        else:
+            self.dataset.append(pols.loc[:, self.all_params], ignore_index=True).reset_index(drop=True)
+
+        return pols
+
     def get_nearest(self, row, df, centroids, threshold=None):
+        """
+        Get nearest polygon
+        """
+
         try:
             nearest = df[(df.centroid == nearest_points(row.centroid, centroids)[1])].iloc[0]
         except ValueError:
@@ -64,6 +126,25 @@ class Tracker(object):
             if distance > threshold:
                 return None
         return nearest
+
+    def get_area_m2(self, row):
+        """
+        Get polygon area in m2
+        """
+        try:
+            area_m2 = row.area_m2
+        except AttributeError:
+            g = transform(
+                partial(
+                   pyproj.transform,
+                   pyproj.Proj(init='EPSG:4326'),
+                   pyproj.Proj(
+                    proj='aea',
+                    lat_1=row.geom.bounds[1],
+                    lat_2=row.geom.bounds[3])),
+                row.geom)
+            area_m2 = g.area
+        return area_m2
 
     def get_storm_id(self, row):
         """ Return storm id from row values """
@@ -102,7 +183,6 @@ class Tracker(object):
         centroids_pressure_prev = gpd.GeoSeries(prev_pressure.loc[:, 'centroid']).unary_union
 
         def process(row):
-            #print(row)
             # 1. Nearby pressure object
             nearest_pressure_current = self.get_nearest(row, current_pressure, centroids_pressure_current, self.distance_to_pressure_threshold)
 
@@ -246,19 +326,12 @@ class Tracker(object):
                 distance_to_pressure = self.missing
 
             # area
-            g = transform(
-                partial(
-                    pyproj.transform,
-                    pyproj.Proj(init='EPSG:4326'),
-                    pyproj.Proj(
-                        proj='aea',
-                        lat_1=needle_row.geom.bounds[1],
-                        lat_2=needle_row.geom.bounds[3])),
-                needle_row.geom)
-            area_m2 = g.area
-
-            if not separate: area_diff = area_m2 - nearest.area_m2
-            else: area_diff = area_m2
+            area_m2 = self.get_area_m2(needle_row)
+            if not separate:
+                prev_area = self.get_area_m2(nearest)
+                area_diff = area_m2 - prev_area
+            else:
+                area_diff = area_m2
 
             # Get and update met params
             try:
@@ -291,9 +364,9 @@ class Tracker(object):
             polygons_1.loc[:, c] = -99
 
         # Process polygons
-        polygons_1.loc[0:10].apply(lambda row: near(row, polygons_2.iloc[0:10]), axis=1)
+        polygons_1.apply(lambda row: near(row, polygons_2), axis=1)
 
-        print(polygons_1)
+        #print(polygons_1)
         return polygons_1
 
 
@@ -341,11 +414,13 @@ class Tracker(object):
         self.previous_storm_objects = storm_objects
         self.previous_timestamp = timestamp
 
-        # 5. Store
-        # To db
+        # Create classification dataset
+        self.create_classification_set(storm_objects, previous_timestamp, timestamp)
+
+        # 5. Store to db
         logging.debug("Inserting current objects to db...")
-        self.dbh.update_storm_objects(storm_objects, self.all_params)
-        sys.exit()
+        self.dbh.update_storm_objects(storm_objects, self.storm_params)
+
 
 
 

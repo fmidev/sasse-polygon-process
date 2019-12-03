@@ -1,4 +1,6 @@
 production:
+  host: localhost
+dev:
   host: http://ec2-34-246-134-41.eu-west-1.compute.amazonaws.com
 
 params:

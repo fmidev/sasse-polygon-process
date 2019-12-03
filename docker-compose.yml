@@ -12,5 +12,11 @@ services:
   tracker:
     volumes:
       - .:/usr/src/app
-    image: tervo/sasse_2:storm_tracker    
-    command: python -u tracker/storm_tracker.py --starttime 2010-01-01 --endtime 2010-01-10
+    environment:
+      AWS_ACCESS_KEY_ID: ***REMOVED***
+      AWS_SECRET_ACCESS_KEY: ***REMOVED***
+    image: tervo/sasse_2:storm_tracker
+    command: python -u tracker/storm_tracker.py --starttime 2010-01-23T13:00:00 --endtime 2010-07-23T13:00:00 --smartmet_config_name dev --db_config_name local
+    #command: python -u tracker/storm_tracker.py --starttime 2010-07-23T13:00:00 --endtime 2010-07-23T13:00:00
+    #command: python -u tracker/storm_tracker.py --starttime 2010-07-23T06:00:00 --endtime 2010-08-10T01:00:00
+    #command: python -u tracker/storm_tracker.py --starttime 2010-07-23T06:00:00 --endtime 2010-07-23T06:00:00
