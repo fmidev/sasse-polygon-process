@@ -1,5 +1,5 @@
 production:
-  host: localhost
+  host: http://172.17.0.1
 dev:
   host: http://ec2-34-246-134-41.eu-west-1.compute.amazonaws.com
 

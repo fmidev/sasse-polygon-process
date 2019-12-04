@@ -27,14 +27,14 @@ def main():
     while d <= endtime:
         logging.info('Processing time: {}'.format(d))
         tracker.run(d)
-        if ym != '{}{}'.format(d.year, d.month):
-            filename = '{}_sasse_2_dataset.csv'.format(ym)
-            fh.df_to_csv(tracker.dataset, filename, filename)
         d += timedelta(hours=1)
+        if ym != '{}{}'.format(d.year, d.month):
+            filename = '{}_sasse_2_dataset.csv'.format(d.strftime('%Y%m'))
+            fh.df_to_csv(tracker.dataset, filename, filename)
         ym = '{}{}'.format(d.year, d.month)
 
     #if tracker.dataset is not None and len(tracker.dataset) > 0:
-    filename = '{}_sasse_2_dataset.csv'.format(ym)
+    filename = '{}_sasse_2_dataset.csv'.format(d.strftime('%Y%m'))    
     fh.df_to_csv(tracker.dataset, filename, filename)
 
 if __name__ =='__main__':

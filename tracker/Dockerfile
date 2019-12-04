@@ -11,5 +11,6 @@ RUN pip install --upgrade numpy psycopg2-binary opencv-python-headless shapely g
 COPY . .
 
 EXPOSE 5432
+EXPOSE 80
 
 CMD [ "python", "./" ]

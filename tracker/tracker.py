@@ -23,12 +23,16 @@ from dbhandler import DBHandler
 from util import speed, bearing
 from smartmethandler import SmartMetException
 
+# Pyproj gives future warnings
+import warnings
+warnings.filterwarnings("ignore")
+
 class Tracker(object):
 
     previous_timestamp = None
     speed_threshold = {'wind': 200, 'pressure': 45}
     distance_to_pressure_threshold = 500
-    missing = -99
+    missing = -999
     dataset = None
     # rounded to nearest decimal so that bbox enlarges to all directions
     loiste_bbox = [26.1,63.7,30.3,65.5]
@@ -327,7 +331,7 @@ class Tracker(object):
 
             # area
             area_m2 = self.get_area_m2(needle_row)
-            if not separate:
+            if not separate and area_m2 != self.missing:
                 prev_area = self.get_area_m2(nearest)
                 area_diff = area_m2 - prev_area
             else:
@@ -359,9 +363,9 @@ class Tracker(object):
         # Add columns so that apply don't get confused because of changing number of columns
         #for c in self.ssh.params_to_list(shortnames=True):
         for c in self.meteorlogical_params:
-            polygons_1.loc[:, c] = -99
+            polygons_1.loc[:, c] = self.missing
         for c in self.polygon_params:
-            polygons_1.loc[:, c] = -99
+            polygons_1.loc[:, c] = self.missing
 
         # Process polygons
         polygons_1.apply(lambda row: near(row, polygons_2), axis=1)
