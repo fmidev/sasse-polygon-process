@@ -177,6 +177,9 @@ class DBHandler(object):
         params : lst
                  List of feature names to store (used to extract features from df)
         """
+        if df is None or len(df) < 1:
+            return
+        
         self.update_storm_ids(df.loc[:,['id', 'storm_id']].fillna('NULL').values)
 
         df.set_index('id', inplace=True)

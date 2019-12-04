@@ -25,6 +25,7 @@ def main():
     d = starttime
     ym = '{}{}'.format(d.year, d.month)
     while d <= endtime:
+        logging.info('Processing time: {}'.format(d))
         tracker.run(d)
         if ym != '{}{}'.format(d.year, d.month):
             filename = '{}_sasse_2_dataset.csv'.format(ym)
