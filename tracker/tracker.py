@@ -78,32 +78,34 @@ class Tracker(object):
         if len(pols) < 1:
             return None
 
-        # Outages and customers
-        pols.loc[:, 'outages'] = 0
-        pols.loc[:, 'customers'] = 0
-
+        # Outages and directly affected customers
         outages = self.dbh.get_outages(starttime, endtime)
         if len(outages) > 0:
             outages['t'] = pd.to_datetime(outages['t'], utc=True)
             df_outages = gpd.sjoin(pols, outages)
             # Outages may exist but not under storm area
             if len(df_outages) > 0:
-                count_outages = df_outages.groupby(by=['id'])['storm_id', 'customers_right'].agg({'storm_id': 'count', 'customers_right': 'sum'}).reset_index(level=0)
-
-                # For some reason outages (stored with name storm_id) don't give value with loc
-                pols.loc[pols['id'] == count_outages['id'], 'outages'] = count_outages.iloc[:, 1]
-                pols.loc[pols['id'] == count_outages['id'], 'customers'] = count_outages.loc[:, 'customers_right']
+                count_outages = df_outages.groupby(by=['id'])['storm_id', 'customers'].agg({'storm_id': 'count', 'customers': 'sum'}).reset_index(level=0)
+                count_outages.rename(columns={'storm_id': 'outages'}, inplace=True)
+                pols = pols.merge(count_outages, on='id', how='left')
+                pols.loc[:,['outages', 'customers']] = pols.loc[:, ['outages', 'customers']].fillna(0)
+            else:
+                pols.loc[:, 'outages'] = 0
+                pols.loc[:, 'customers'] = 0
+        else:
+            pols.loc[:, 'outages'] = 0
+            pols.loc[:, 'customers'] = 0
 
         # Transformers
-        pols.loc[:, 'transformers'] = 0
-
         transformers = self.dbh.get_transformers()
         if len(transformers) > 0:
             df_transformers = gpd.sjoin(pols, transformers)
-            # Just in case. There should be always transformers, so this if should meaningless
+            # Just in case. There should be always transformers, so this if should be meaningless if
             if len(df_transformers) > 0:
                 count_transformers = df_transformers.groupby(by=['id'])['storm_id'].count().to_frame().reset_index(level=0)
-                pols.loc[pols['id'] == count_transformers['id'], 'transformers'] = count_transformers.iloc[:,1]
+                count_transformers.rename(columns={'storm_id': 'transformers'}, inplace=True)
+                pols = pols.merge(count_transformers, on='id', how='left')
+                pols.loc[:,'transformers'] = pols.loc[:, 'transformers'].fillna(0)                
 
         if self.dataset is None:
             self.dataset = pols.loc[:, self.all_params]
@@ -319,7 +321,7 @@ class Tracker(object):
 
                 separate = False
                 if speed_self > self.speed_threshold['wind'] or speed_pressure > self.speed_threshold['pressure']:
-                    logging.warning('Nearest object over {} km away. Treating as a separate storm'.format(self.speed_threshold))
+                    logging.debug('Nearest object over {} km away. Treating as a separate storm'.format(self.speed_threshold))
                     separate = True
                     speed_self = self.missing
             except ValueError:
