@@ -105,7 +105,7 @@ class Tracker(object):
                 count_transformers = df_transformers.groupby(by=['id'])['storm_id'].count().to_frame().reset_index(level=0)
                 count_transformers.rename(columns={'storm_id': 'transformers'}, inplace=True)
                 pols = pols.merge(count_transformers, on='id', how='left')
-                pols.loc[:,'transformers'] = pols.loc[:, 'transformers'].fillna(0)                
+                pols.loc[:,'transformers'] = pols.loc[:, 'transformers'].fillna(0)
 
         if self.dataset is None:
             self.dataset = pols.loc[:, self.all_params]
@@ -359,6 +359,8 @@ class Tracker(object):
 
             for p, v in polygon_params.items():
                 polygons_1.loc[polygons_1.loc[:, 'id'] == needle_row.id, p] = v
+
+            logging.debug(polygons_1)
 
             return
 

@@ -39,7 +39,9 @@ class SmartMetHandler(object):
 
         paramlist = ["FF-MS:ERA5:26:6:10:0"]
         paramlist = self.params_to_list()
-        url = "{host}/timeseries?format=json&param={params}&starttime={time}&endtime={time}&wkt={wkt}".format(host=self.config['host'],params=','.join(paramlist), wkt=wkt.simplify(0.05, preserve_topology=True), time=time.strftime("%Y%m%dT%H%M%S"))
+        url = "{host}/timeseries?format=json&starttime={time}&endtime={time}&tz=utc&param={params}&wkt={wkt}".format(host=self.config['host'],params=','.join(paramlist), wkt=wkt.simplify(0.05, preserve_topology=True), time=time.strftime("%Y%m%dT%H%M%S"))
+
+        logging.debug(url)
 
         response = requests.get(url)
         if response.status_code == 200:

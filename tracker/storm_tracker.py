@@ -36,7 +36,7 @@ def main():
 
     #if tracker.dataset is not None and len(tracker.dataset) > 0:
     filename = '{}_sasse_2_dataset.csv'.format(d.strftime('%Y%m%d'))
-    fh.df_to_csv(tracker.dataset, filename, filename)    
+    fh.df_to_csv(tracker.dataset, filename, filename)
 
 if __name__ =='__main__':
 
