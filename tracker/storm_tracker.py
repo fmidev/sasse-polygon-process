@@ -23,19 +23,20 @@ def main():
     endtime = dt.datetime.strptime(options.endtime, "%Y-%m-%dT%H:%M:%S")
 
     d = starttime
-    ym = '{}{}'.format(d.year, d.month)
+    ymd = '{}{}{}'.format(d.year, d.month, d.day)
     while d <= endtime:
         logging.info('Processing time: {}'.format(d))
         tracker.run(d)
         d += timedelta(hours=1)
-        if ym != '{}{}'.format(d.year, d.month):
-            filename = '{}_sasse_2_dataset.csv'.format(d.strftime('%Y%m'))
+        if ymd != '{}{}{}'.format(d.year, d.month, d.day):
+            filename = '{}_sasse_2_dataset.csv'.format(d.strftime('%Y%m%d'))
             fh.df_to_csv(tracker.dataset, filename, filename)
-        ym = '{}{}'.format(d.year, d.month)
+            tracker.dataset = None
+        ymd = '{}{}{}'.format(d.year, d.month, d.day)
 
     #if tracker.dataset is not None and len(tracker.dataset) > 0:
-    filename = '{}_sasse_2_dataset.csv'.format(d.strftime('%Y%m'))    
-    fh.df_to_csv(tracker.dataset, filename, filename)
+    filename = '{}_sasse_2_dataset.csv'.format(d.strftime('%Y%m%d'))
+    fh.df_to_csv(tracker.dataset, filename, filename)    
 
 if __name__ =='__main__':
 
