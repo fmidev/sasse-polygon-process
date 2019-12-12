@@ -24,7 +24,7 @@ services:
     #command: python -u tracker/storm_tracker.py --starttime ${StartTime:-2011-07-23T13:00:00} --endtime ${EndTime:-2011-07-23T13:00:00} --smartmet_config_name ${smartmet_config_name:-dev} --db_config_name ${db_config_name:-local}
     #command: python -u tracker/storm_tracker.py --starttime ${StartTime:-2010-07-23T06:00:00} --endtime ${EndTime:-2010-07-23T06:00:00} --smartmet_config_name ${smartmet_config_name:-dev} --db_config_name ${db_config_name:-local}
 
-    command: python -u tracker/storm_tracker.py --starttime ${StartTime:-2015-02-01T00:00:00} --endtime ${EndTime:-2015-02-02T23:00:00} --smartmet_config_name ${smartmet_config_name:-dev} --db_config_name ${db_config_name:-local}
+    command: python -u tracker/storm_tracker.py --starttime ${StartTime:-2014-09-01T00:00:00} --endtime ${EndTime:-2014-09-30T23:00:00} --smartmet_config_name ${smartmet_config_name:-dev} --db_config_name ${db_config_name:-local}
 
 
     #command: python -u tracker/storm_tracker.py --starttime 2010-07-23T06:00:00 --endtime 2010-08-10T01:00:00

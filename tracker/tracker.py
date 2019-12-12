@@ -137,19 +137,16 @@ class Tracker(object):
         """
         Get polygon area in m2
         """
-        try:
-            area_m2 = row.area_m2
-        except AttributeError:
-            g = transform(
-                partial(
-                   pyproj.transform,
-                   pyproj.Proj(init='EPSG:4326'),
-                   pyproj.Proj(
-                    proj='aea',
-                    lat_1=row.geom.bounds[1],
-                    lat_2=row.geom.bounds[3])),
-                row.geom)
-            area_m2 = g.area
+        g = transform(
+            partial(
+               pyproj.transform,
+               pyproj.Proj(init='EPSG:4326'),
+               pyproj.Proj(
+                proj='aea',
+                lat_1=row.geom.bounds[1],
+                lat_2=row.geom.bounds[3])),
+            row.geom)
+        area_m2 = g.area
         return area_m2
 
     def get_storm_id(self, row):
@@ -263,35 +260,18 @@ class Tracker(object):
 
     def process_polygons(self, polygons_1, polygons_2):
         """
-        Connect polygons and calculate trakcing parameters (speed, angle, area, area_diff)
+        Calculate trakcing parameters (speed, angle, area, area_diff)
         """
-        # If current polygons are empty, return empy
-        if len(polygons_1) < 1:
-            return polygons_1
 
-        # If previous polygons are empty, all storms are new. Return a new storm id and empty tracking fields
-        if polygons_2 is None or len(polygons_2) < 1:
-            polygons_1['speed'], polygons_1['angle'], \
-            polygons_1['area_m2'], polygons_1['area_diff'], \
-            polygons_1['speed_pressure'], polygons_1['angle_pressure'], \
-            polygons_1['distance_to_pressure'] = self.missing, self.missing, self.missing, self.missing, self.missing, self.missing, self.missing
-            return polygons_1
+        nearest_pressure_1 = []
 
-        # Separate wind and pressure elements
-        polygons_1_wind = polygons_1[(polygons_1.loc[:,'weather_parameter'] != 'Pressure')]
-        polygons_2_wind = polygons_2[(polygons_2.loc[:,'weather_parameter'] != 'Pressure')]
-        polygons_1_pressure = polygons_1[(polygons_1.loc[:,'weather_parameter'] == 'Pressure')]
-        polygons_2_pressure = polygons_2[(polygons_2.loc[:,'weather_parameter'] == 'Pressure')]
-
-        centroids_pressure_1 = gpd.GeoSeries(polygons_1_pressure.loc[:, 'centroid']).unary_union
-        centroids_pressure_2 = gpd.GeoSeries(polygons_2_pressure.loc[:, 'centroid']).unary_union
-
-        def near(needle_row, search_base):
+        def polygon_features(needle_row):
             polygon_params = {}
 
             # Nearest pressure objects
             try:
-                nearest_pressure_1 = polygons_1_pressure[(polygons_1_pressure.centroid == nearest_points(needle_row.centroid, centroids_pressure_1)[1])].iloc[0]
+                nearest_pressure_1 = polygons_1_pressure[(polygons_1_pressure.centroid == nearest_points(needle_row.centroid,
+                                                                                                         centroids_pressure_1)[1])].iloc[0]
                 # Distance to pressure object
                 distance_to_pressure = speed(needle_row, nearest_pressure_1)
                 # Use only pressure polygons which are near enough
@@ -301,6 +281,30 @@ class Tracker(object):
             except ValueError:
                 distance_to_pressure = self.missing
                 nearest_pressure_1 = []
+
+            # area
+            area_m2 = self.get_area_m2(needle_row)
+
+            # Get and update met params
+            try:
+                met_params = self.ssh.get_data(needle_row.geom, needle_row.point_in_time)
+                for p, v in met_params.items():
+                    polygons_1.loc[polygons_1.loc[:, 'id'] == needle_row.id, p] = v
+            except SmartMetException as e:
+                logging.error(e)
+                pass
+
+            # Update features
+            polygon_params['area_m2'] = area_m2
+            polygon_params['distance_to_pressure'] = distance_to_pressure
+            for p, v in polygon_params.items():
+                polygons_1.loc[polygons_1.loc[:, 'id'] == needle_row.id, p] = v
+
+            return
+
+
+        def near(needle_row, search_base):
+            polygon_params = {}
 
             try:
                 # Nearest previous object
@@ -331,38 +335,31 @@ class Tracker(object):
                 speed_pressure, angle_pressure = self.missing, self.missing
                 distance_to_pressure = self.missing
 
-            # area
-            area_m2 = self.get_area_m2(needle_row)
-            if not separate and area_m2 != self.missing:
+            # area diff
+            if not separate and needle_row.area_m2 != self.missing:
                 prev_area = self.get_area_m2(nearest)
-                area_diff = area_m2 - prev_area
+                area_diff = needle_row.area_m2 - prev_area
             else:
-                area_diff = area_m2
-
-            # Get and update met params
-            try:
-                met_params = self.ssh.get_data(needle_row.geom, needle_row.point_in_time)
-                for p, v in met_params.items():
-                    polygons_1.loc[polygons_1.loc[:, 'id'] == needle_row.id, p] = v
-            except SmartMetException as e:
-                logging.error(e)
-                pass
+                area_diff = needle_row.area_m2
 
             # Update polygon params
             polygon_params['speed_self'] = speed_self
             polygon_params['angle_self'] = angle_self
-            polygon_params['area_m2'] = area_m2
             polygon_params['area_diff'] = area_diff
             polygon_params['speed_pressure'] = speed_pressure
             polygon_params['angle_pressure'] = angle_pressure
-            polygon_params['distance_to_pressure'] = distance_to_pressure
 
             for p, v in polygon_params.items():
                 polygons_1.loc[polygons_1.loc[:, 'id'] == needle_row.id, p] = v
 
-            logging.debug(polygons_1)
+            logging.debug("\n{}".format(polygons_1))
 
             return
+
+
+        # If current polygons are empty, return empy
+        if len(polygons_1) < 1:
+            return polygons_1
 
         # Add columns so that apply don't get confused because of changing number of columns
         #for c in self.ssh.params_to_list(shortnames=True):
@@ -371,8 +368,27 @@ class Tracker(object):
         for c in self.polygon_params:
             polygons_1.loc[:, c] = self.missing
 
-        # Process polygons
-        polygons_1.apply(lambda row: near(row, polygons_2), axis=1)
+        # Separate wind and pressure elements
+        polygons_1_wind = polygons_1[(polygons_1.loc[:,'weather_parameter'] != 'Pressure')]
+        polygons_1_pressure = polygons_1[(polygons_1.loc[:,'weather_parameter'] == 'Pressure')]
+        centroids_pressure_1 = gpd.GeoSeries(polygons_1_pressure.loc[:, 'centroid']).unary_union
+
+        # Calculate area and distance to nearest pressure object
+        polygons_1.apply(lambda row: polygon_features(row), axis=1)
+
+        # If previous polygons are empty, all storms are new. Return a new storm id and empty tracking fields
+        if polygons_2 is None or len(polygons_2) < 1:
+            polygons_1['speed'], polygons_1['angle'], \
+            polygons_1['area_diff'], polygons_1['speed_pressure'], \
+            polygons_1['angle_pressure'] = self.missing, self.missing, self.missing, self.missing, self.missing
+        else:
+            # Separate wind and pressure elements
+            polygons_2_wind = polygons_2[(polygons_2.loc[:,'weather_parameter'] != 'Pressure')]
+            polygons_2_pressure = polygons_2[(polygons_2.loc[:,'weather_parameter'] == 'Pressure')]
+            centroids_pressure_2 = gpd.GeoSeries(polygons_2_pressure.loc[:, 'centroid']).unary_union
+
+            # Calculate tracking features
+            polygons_1.apply(lambda row: near(row, polygons_2), axis=1)
 
         #print(polygons_1)
         return polygons_1
