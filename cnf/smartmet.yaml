@@ -1,7 +1,7 @@
 production:
   host: http://172.17.0.1
 dev:
-  host: http://ec2-52-18-107-14.eu-west-1.compute.amazonaws.com
+  host: http://ec2-54-154-181-6.eu-west-1.compute.amazonaws.com
 
 params:
   T-K:ERA5:26:1:0:1:
@@ -16,13 +16,13 @@ params:
       - "@AVG"
       - "@MIN"
       - "@MAX"
-  FF-MS:ERA5:26:6:10:0:
+  VIRT-WIND-SPEED:ERA5:26:1:0:1:
     name: Wind Speed
     aggregation:
       - "@AVG"
       - "@MAX"
       - "@STD"
-  DD-D:ERA5:26:6:10:0:
+  VIRT-WIND-DIR:ERA5:26:1:0:1:
     name: Wind Direction
     aggregation:
       - "@AVG"
