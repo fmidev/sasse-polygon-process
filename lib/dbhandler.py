@@ -179,11 +179,11 @@ class DBHandler(object):
         """
         if df is None or len(df) < 1:
             return
-        
+
         self.update_storm_ids(df.loc[:,['id', 'storm_id']].fillna('NULL').values)
 
         df.set_index('id', inplace=True)
-        features = df.loc[:, params].replace(-99, None)
+        features = df.loc[:, params]# .replace(-99, None)
         engine = create_engine('postgresql://{user}:{passwd}@{host}:5432/{db}'.format(user=self.db_params['user'],
                                                                                      passwd=self.db_params['password'],
                                                                                      host=self.db_params['host'],
@@ -201,3 +201,25 @@ class DBHandler(object):
                 con.execute('ALTER TABLE sasse.{} ADD PRIMARY KEY ({});'.format(table_name, index_name))
             except exc.SQLAlchemyError:
                 pass
+
+    def update_classification_dataset(self, df, table_name='classification_dataset'):
+        """
+        Save classification dataset into the db
+
+        df : DataFrame
+             DataFrame data
+        """
+        if df is None or len(df) < 1:
+            return
+        logging.info('Storing classification set to db sasse.{}...'.format(table_name))
+        #df.set_index('id', inplace=True)
+        engine = create_engine('postgresql://{user}:{passwd}@{host}:5432/{db}'.format(user=self.db_params['user'],
+                                                                                     passwd=self.db_params['password'],
+                                                                                     host=self.db_params['host'],
+                                                                                     db=self.db_params['database']))
+
+        index_name = 'id'
+        try:
+            df.to_sql(table_name, engine, schema='sasse', if_exists='append', index=False)
+        except exc.SQLAlchemyError:
+            logging.warning('Rows already exist, not updating')
