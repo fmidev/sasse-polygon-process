@@ -38,6 +38,8 @@ class SmartMetHandler(object):
         """ Read data for given wkt and time """
 
         paramlist = ["FF-MS:ERA5:26:6:10:0"]
+        duplicates =["Wind Speed", "Wind Direction"]
+
         paramlist = self.params_to_list()
         url = "{host}/timeseries?format=json&starttime={time}&endtime={time}&tz=utc&param={params}&wkt={wkt}".format(host=self.config['host'],params=','.join(paramlist), wkt=wkt.simplify(0.05, preserve_topology=True), time=time.strftime("%Y%m%dT%H%M%S"))
 
@@ -53,8 +55,14 @@ class SmartMetHandler(object):
         for param, value in data.items():
             f = re.search('(?<=@).*(?={)', param).group()
             p = re.search(r'(?<={).*(?=})', param).group()
-            met_params[f+' '+self.params[p]['name']] = value
 
+            # Virtual wind params and real wind params may be missing and are
+            # substitute to each other depending on data
+            if self.params[p]['name'] in duplicates and value is None:
+                continue
+            else:
+                met_params[f+' '+self.params[p]['name']] = value
+                
         return met_params
 
     def params_to_list(self, shortnames=False):

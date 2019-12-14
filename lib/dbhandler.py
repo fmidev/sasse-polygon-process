@@ -84,6 +84,8 @@ class DBHandler(object):
             end = endtime.strftime('%Y-%m-%d %H:%M:%S')
             sql = sql + " AND \"start\" AT TIME ZONE 'Europe/Helsinki' AT TIME ZONE 'UTC' <= '{}'".format(end)
 
+        logging.debug(sql)
+
         return self._query(sql)
 
     def get_transformers(self):

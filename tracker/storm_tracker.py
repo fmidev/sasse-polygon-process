@@ -67,6 +67,6 @@ if __name__ =='__main__':
     options = parser.parse_args()
 
     logging.basicConfig(format=("[%(levelname)s] %(asctime)s %(filename)s:%(funcName)s:%(lineno)s %(message)s"),
-                        level=logging.DEBUG)
+                        level=logging.INFO)
 
     main()
