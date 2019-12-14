@@ -18,7 +18,7 @@ def save_dataset(tracker, d, fh=None, db=None):
         fh.df_to_csv(tracker.dataset, filename, filename)
 
     if options.dataset_type == 'db':
-        db.update_classification_dataset(tracker.dataset)
+        db.update_classification_dataset(tracker.dataset, table_name=options.dataset_name)
 
     tracker.dataset = None
 
@@ -59,6 +59,7 @@ if __name__ =='__main__':
     parser.add_argument('--smartmet_config_filename', type=str, default='cnf/smartmet.yaml', help='CNF file containing SmartMet Server pararemters')
     parser.add_argument('--smartmet_config_name', type=str, default='production', help='Section name for smartmet')
     parser.add_argument('--dataset_type', type=str, default='db', help='Store dataset to (db|csv)')
+    parser.add_argument('--dataset_name', type=str, default='classification_dataset', help='Database table name if dataset is troed into db')
 
     if len(sys.argv) <= 1:
         parser.print_help()

@@ -2,7 +2,7 @@
 """
 SmartMet Server data loader
 """
-import sys, os, logging, datetime, yaml, requests, re
+import sys, os, logging, datetime, yaml, requests, re, time
 import numpy as np
 from configparser import ConfigParser
 import pandas as pd
@@ -34,14 +34,14 @@ class SmartMetHandler(object):
 
         return config_dict
 
-    def get_data(self, wkt, time):
+    def get_data(self, wkt, t):
         """ Read data for given wkt and time """
 
         paramlist = ["FF-MS:ERA5:26:6:10:0"]
         duplicates =["Wind Speed", "Wind Direction"]
 
         paramlist = self.params_to_list()
-        url = "{host}/timeseries?format=json&starttime={time}&endtime={time}&tz=utc&param={params}&wkt={wkt}".format(host=self.config['host'],params=','.join(paramlist), wkt=wkt.simplify(0.05, preserve_topology=True), time=time.strftime("%Y%m%dT%H%M%S"))
+        url = "{host}/timeseries?format=json&starttime={time}&endtime={time}&tz=utc&param={params}&wkt={wkt}".format(host=self.config['host'],params=','.join(paramlist), wkt=wkt.simplify(0.05, preserve_topology=True), time=t.strftime("%Y%m%dT%H%M%S"))
 
         logging.debug(url)
 
@@ -62,7 +62,10 @@ class SmartMetHandler(object):
                 continue
             else:
                 met_params[f+' '+self.params[p]['name']] = value
-                
+
+        # Throttle number of requests
+        time.sleep(2)
+
         return met_params
 
     def params_to_list(self, shortnames=False):
