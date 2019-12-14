@@ -74,7 +74,7 @@ class DBHandler(object):
         FROM
             sasse.outages a
         WHERE
-            a.type not in ('-1', 'maintenance', 'planned')
+            a.type not in ('maintenance', 'planned')
         """
 
         if starttime is not None:
