@@ -18,9 +18,10 @@ class SmartMetHandler(object):
     Class to load data from SmartMet Server
     """
 
-    def __init__(self, config_filename, config_name):
+    def __init__(self, config_filename, config_name, sleep_time=2):
         self.config_filename = config_filename
         self.config_name = config_name
+        self.sleep_time = sleep_time
 
         params = self._config(self.config_filename, self.config_name)
 
@@ -64,7 +65,7 @@ class SmartMetHandler(object):
                 met_params[f+' '+self.params[p]['name']] = value
 
         # Throttle number of requests
-        time.sleep(2)
+        time.sleep(self.sleep_time)
 
         return met_params
 

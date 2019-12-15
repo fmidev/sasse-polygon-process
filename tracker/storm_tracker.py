@@ -28,7 +28,7 @@ def main():
     #logging.info("Reading input files.")
 
     dbh = DBHandler(options.db_config_filename, options.db_config_name)
-    ssh = SmartMetHandler(options.smartmet_config_filename, options.smartmet_config_name)
+    ssh = SmartMetHandler(options.smartmet_config_filename, options.smartmet_config_name, sleep_time=options.requests_throttle_time)
     fh = FileHandler(s3_bucket='fmi-sasse-classification-dataset')
     tracker = Tracker(dbh, ssh)
 
@@ -60,6 +60,7 @@ if __name__ =='__main__':
     parser.add_argument('--smartmet_config_name', type=str, default='production', help='Section name for smartmet')
     parser.add_argument('--dataset_type', type=str, default='db', help='Store dataset to (db|csv)')
     parser.add_argument('--dataset_name', type=str, default='classification_dataset', help='Database table name if dataset is troed into db')
+    parser.add_argument('--requests_throttle_time', type=int, default=2, help='Sleep time after each SmartMet requests to throttle requests')
 
     if len(sys.argv) <= 1:
         parser.print_help()

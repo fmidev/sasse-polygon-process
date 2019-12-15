@@ -108,6 +108,7 @@ class Tracker(object):
                 pols.loc[:,'transformers'] = pols.loc[:, 'transformers'].fillna(0)
 
         if self.dataset is None:
+            print(pols)
             self.dataset = pols.loc[:, self.all_params]
         else:
             self.dataset.append(pols.loc[:, self.all_params], ignore_index=True).reset_index(drop=True)

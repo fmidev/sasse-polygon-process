@@ -1,8 +1,8 @@
 production:
   host: http://172.17.0.1
 dev:
-  host: http://ec2-63-32-62-31.eu-west-1.compute.amazonaws.com
-
+  host: http://ec2-52-215-83-153.eu-west-1.compute.amazonaws.com
+  
 params:
   T-K:ERA5:26:1:0:1:
     name: Temperature
