@@ -1,0 +1,31 @@
+version: '3'
+services:
+  jup:
+    volumes:
+      - ~/Dropbox/tyot/sasse:/home/jovyan/work
+    environment:
+      PYTHONUNBUFFERED: 1
+    image: tervo/pystan
+    ports:
+      - "81:8888"
+
+  tracker:
+    volumes:
+      - .:/usr/src/app:Z
+    environment:
+      AWS_ACCESS_KEY_ID: ***REMOVED***
+      AWS_SECRET_ACCESS_KEY: ***REMOVED***
+    build:
+      context: ./tracker
+      dockerfile: Dockerfile
+    container_name: tracker
+    image: sasse:storm_tracker
+    #command: python -u tracker/storm_tracker.py --starttime ${StartTime:-2011-03-03T11:00:00} --endtime ${EndTime:-2011-03-03T11:00:00} --smartmet_config_name ${smartmet_config_name:-dev} --db_config_name ${db_config_name:-local}
+    #command: python -u tracker/storm_tracker.py --starttime ${StartTime:-2011-07-23T13:00:00} --endtime ${EndTime:-2011-07-23T13:00:00} --smartmet_config_name ${smartmet_config_name:-dev} --db_config_name ${db_config_name:-local}
+    #command: python -u tracker/storm_tracker.py --starttime ${StartTime:-2010-07-23T06:00:00} --endtime ${EndTime:-2010-07-23T06:00:00} --smartmet_config_name ${smartmet_config_name:-dev} --db_config_name ${db_config_name:-local}
+
+    command: python -u tracker/storm_tracker.py --starttime ${StartTime:-2011-12-30T21:00:00} --endtime ${EndTime:-2011-12-30T23:00:00} --smartmet_config_name ${smartmet_config_name:-dev} --db_config_name ${db_config_name:-local} --dataset_name ${DatasetName:-classification_dataset_dev} --requests_throttle_time ${requests_throttle_time:-0}
+
+
+    #command: python -u tracker/storm_tracker.py --starttime 2010-07-23T06:00:00 --endtime 2010-08-10T01:00:00
+    #

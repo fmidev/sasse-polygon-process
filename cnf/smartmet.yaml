@@ -1,0 +1,92 @@
+production:
+  host: http://172.17.0.1
+dev:
+  host: http://ec2-52-215-83-153.eu-west-1.compute.amazonaws.com
+  
+params:
+  T-K:ERA5:26:1:0:1:
+    name: Temperature
+    aggregation:
+      - "@AVG"
+      - "@MIN"
+      - "@MAX"
+  TD-C:ERA5:26:1:0:1:
+    name: Dewpoint
+    aggregation:
+      - "@AVG"
+      - "@MIN"
+      - "@MAX"
+  FF-MS:ERA5:26:6:10:0:
+    name: Wind Speed
+    aggregation:
+      - "@AVG"
+      - "@MAX"
+      - "@STD"
+  VIRT-WIND-SPEED:ERA5:26:1:0:1:
+    name: Wind Speed
+    aggregation:
+      - "@AVG"
+      - "@MAX"
+      - "@STD"
+  DD-D:ERA5:26:6:10:0:
+    name: Wind Direction
+    aggregation:
+      - "@AVG"
+      - "@STD"
+  VIRT-WIND-DIR:ERA5:26:1:0:1:
+    name: Wind Direction
+    aggregation:
+      - "@AVG"
+      - "@STD"
+  FFG-MS:ERA5:26:1:0:1:
+    name: Wind gust
+    aggregation:
+      - "@AVG"
+      - "@MAX"
+      - "@STD"
+  PGR-PA:ERA5:26:1:0:1:
+    name: Pressure
+    aggregation:
+      - "@MIN"
+  HSNOW-M:ERA5:26:1:0:1:
+    name: Snowdepth
+    aggregation:
+      - "@AVG"
+      - "@MAX"
+      - "@MIN"
+  SNACC-KGM2:ERA5:26:1:0:1:
+    name: Snowfall
+    aggregation:
+      - "@AVG"
+      - "@MAX"
+      - "@MIN"
+      - "@SUM"
+  N-0TO1:ERA5:26:1:0:1:
+    name: Total cloud cover
+    aggregation:
+      - "@AVG"
+  TOTCWV-KGM2:ERA5:26:1:0:1:
+    name: Total column water vapor
+    aggregation:
+      - "@AVG"
+      - "@MAX"
+      - "@MIN"
+  RR-KGM2:ERA5:26:1:0:1:
+    name: Precipitation kg/m2
+    aggregation:
+      - "@AVG"
+      - "@MAX"
+      - "@MIN"
+      - "@SUM"
+  MIXHGT-M:ERA5:26:1:0:1:
+    name: Mixed layer height
+    aggregation:
+      - "@AVG"
+      - "@MIN"
+      - "@MAX"
+  CAPE-JKG:ERA5:26:1:0:1:
+    name: CAPE
+    aggregation:
+      - "@AVG"
+      - "@MIN"
+      - "@MAX"
