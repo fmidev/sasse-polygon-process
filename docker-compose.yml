@@ -42,4 +42,17 @@ services:
       dockerfile: Dockerfile
     container_name: classifier
     image: sasse:classifier
-    command: python -u classifier/classifier.py --starttime ${StartTime:-2011-12-30T21:00:00} --endtime ${EndTime:-2011-12-30T23:00:00} --db_config_name ${db_config_name:-local}
+    command: python -u classifier/train_classifier.py --starttime ${StartTime:-2011-12-30T21:00:00} --endtime ${EndTime:-2011-12-30T23:00:00} --db_config_name ${db_config_name:-local}
+
+  classify:
+    volumes:
+      - .:/usr/src/app:Z
+    environment:
+      AWS_ACCESS_KEY_ID: ***REMOVED***
+      AWS_SECRET_ACCESS_KEY: ***REMOVED***
+    build:
+      context: ./tracker
+      dockerfile: Dockerfile
+    container_name: classifier
+    image: sasse:classifier
+    command: python -u classifier/classify.py --starttime ${StartTime:-2011-12-30T21:00:00} --endtime ${EndTime:-2011-12-30T23:00:00} --db_config_name ${db_config_name:-local}

@@ -10,6 +10,7 @@ import sys, logging, os, boto3
 import pandas as pd
 import geopandas as gpd
 from shapely import wkt
+from joblib import dump, load
 
 class FileHandler(object):
 
@@ -32,6 +33,32 @@ class FileHandler(object):
             resource = boto3.resource('s3')
             self.bucket = resource.Bucket(self.bucket_name)
 
+    def dataset_from_csv(self, filename):
+        """
+        Read dataset from csv file
+        """
+        pass
+
+    def load_model(self, save_path, force=False):
+        """ Load model from given path """
+        filename = save_path + '/model.joblib'
+        self._download_from_bucket(filename, filename, force=False)
+        return load(filename)
+
+    def save_model(self, model, save_path):
+        """
+        Save model to given path
+        """
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
+
+        filename = save_path + '/model.joblib'
+        dump(model, filename)
+        logging.info('Saved model to {}'.format(filename))
+
+        if self.s3:
+            self._upload_to_bucket(filename, filename)
+
     def df_to_csv(self, df, local_filename, ext_filename=None, store_header=True):
         """
         Store Pandas DataFrame to csv file and upload it to bucket if ext_filename is set
@@ -42,7 +69,7 @@ class FileHandler(object):
         else:
             open(local_filename, 'a').close()
             logging.info('No data, created empty file {}'.format(local_filename))
-            
+
         if ext_filename is not None:
             self._upload_to_bucket(local_filename, ext_filename)
 

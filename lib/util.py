@@ -1,7 +1,42 @@
 import numpy as np
-import os, math, pyproj
+import os, math, pyproj, yaml
 from shapely.ops import transform
 from functools import partial
+
+def get_savepath(options):
+    """
+    Get savepath based on given options
+    """
+    return options.model_savepath +'/'+options.model
+
+def get_param_names(config_filename, shortnames=True):
+    """ Get param names, partly from config and partly as hard coded """
+
+    with open(config_filename) as f:
+        file_content = f.read()
+
+        config_dict = yaml.load(file_content, Loader=yaml.FullLoader)
+
+        params = config_dict['params']
+        met_params = set()
+        for param, info in params.items():
+            for f in info['aggregation']:
+                if shortnames:
+                    met_params.add(f[1:]+' '+info['name'])
+                else:
+                    met_params.add(f+'{'+param+'}')
+
+    met_params = list(met_params)
+    polygon_params = ['speed_self', 'angle_self', 'area_m2', 'area_diff', 'low_limit']
+    features = polygon_params + met_params
+
+    meta_params = ['id', 'storm_id', 'point_in_time', 'weather_parameter', 'high_limit', 'transformers', 'all_customers', 'outages', 'customers']
+    labels = ['class', 'class_customers']
+
+    all_params = features + meta_params + labels
+
+    return features, meta_params, labels, all_params
+
 
 def surrounding_indexes(pixel_coord, window, boundary):
     """ Returns the indexes of the pixels surrounding the given

@@ -44,6 +44,11 @@ class DBHandler(object):
         self.db_params = db
         return db
 
+    def save_classes(self, ids, classes):
+        """
+        Save classes to db
+        """
+        pass
 
     def get_polygons(self, filters):
         """
@@ -232,5 +237,5 @@ class DBHandler(object):
         """
 
         sql = """SELECT "{}" FROM sasse.classification_dataset""".format('","'.join(params))
-        
+
         return self._query(sql)
