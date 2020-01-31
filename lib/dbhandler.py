@@ -225,3 +225,12 @@ class DBHandler(object):
             df.to_sql(table_name, engine, schema='sasse', if_exists='append', index=False)
         except exc.SQLAlchemyError:
             logging.warning('Rows already exist, not updating')
+
+    def get_dataset(self, params):
+        """
+        Read dataset from db
+        """
+
+        sql = """SELECT "{}" FROM sasse.classification_dataset""".format('","'.join(params))
+        
+        return self._query(sql)
