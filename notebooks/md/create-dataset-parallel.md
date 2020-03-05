@@ -2997,11 +2997,9 @@ plot_corr(df) # Function defined in Loiste & JSE analysis
 
 #### Correlation between weather parameters and outages
 
-Correlation between outages and different weather parameters (see two last rows). Significant correlation exists with at least: speed, area, temperature, standard deviation of the wind speed, total column water vapor, mixed layer height, CAPE, Dewpoint, total cloud cover, wind gust and pressure.
+Correlation between outages and different weather parameters (see two last rows). Significant correlation exists with at least: area_m2, Max wind speed, STD Wind Speed, Max Wind Gust, STD Wind Gust, Max Precipitation kg/m2, SUM Precipitation KG/m2, Sum Snowfall, AVG Mixed layer height, Max Mixed layer height.
 
-At least CAPE is most probably related to convective weather. 
-
-P-value test passes for all parameters.
+P-value test passes for all parameters having significant correlation except for Max precipitation kg/m2 (why?).
 
 
 ```python
@@ -3028,9 +3026,9 @@ plt.tight_layout()
 ![png](output_101_1.png)
 
 
-Let's consider only winter months (from beginning of October to end of January). Now we don't have significant correlation between CAPE and outages but we do have much stronger correlation between most other parameters. Distance to pressure object and wind speed introduce also a significant correlation with outages.
+Let's consider only winter months (from beginning of October to end of January). Correlations are same with whole dataset.
 
-P-value test do not pass for several parameter any more, however. We have much less data (826 rows).
+P-value test passes for all paratemers having significant correlation  except AVG windspeed (why?).
 
 
 ```python
