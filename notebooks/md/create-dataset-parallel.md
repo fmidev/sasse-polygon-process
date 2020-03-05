@@ -585,7 +585,7 @@ dataset.plot(kind='scatter', x='outages', y='customers', ax=ax, c='green')
 
 
 
-    <matplotlib.axes._subplots.AxesSubplot at 0x7f0587d1e080>
+    <matplotlib.axes._subplots.AxesSubplot at 0x7faa7dd3bb38>
 
 
 
@@ -611,9 +611,9 @@ Class 3: 11 -    outages  --> lots of customers without electricity<br>
 
 We can also classify the data based on number of customers respectively:. 
 
-Class 1:   1 -  50 cusomters  --> max ~2 outages<br>
-Class 2:  51 - 250 customers  --> max ~10 outages <br>
-Class 3: 251 -     customers  --> lots of outages<br>
+Class 1:   1 - 250 cusomters  --> max ~2 outages<br>
+Class 2: 251 - 500 customers  --> max ~10 outages <br>
+Class 3: 501 -     customers  --> lots of outages<br>
 
 
 ```python
@@ -625,7 +625,7 @@ for low, high in limits:
     i += 1
     
 # outages
-limits = [(0,0), (1,50), (51,250), (251, 9999999)]
+limits = [(0,0), (1,250), (251,500), (501, 9999999)]
 i = 0
 for low, high in limits:
     dataset.loc[(dataset.loc[:, 'customers'] >= low) & (dataset.loc[:, 'customers'] <= high), 'class_customers'] = i
@@ -658,7 +658,6 @@ dataset
       <th></th>
       <th>id</th>
       <th>storm_id</th>
-      <th>point_in_time</th>
       <th>weather_parameter</th>
       <th>low_limit</th>
       <th>high_limit</th>
@@ -666,11 +665,12 @@ dataset
       <th>angle_self</th>
       <th>area_m2</th>
       <th>area_diff</th>
+      <th>MIN Temperature</th>
       <th>...</th>
       <th>SUM Snowfall</th>
-      <th>AVG Temperature</th>
-      <th>MAX Wind gust</th>
-      <th>MIN Pressure</th>
+      <th>AVG Snowdepth</th>
+      <th>AVG Mixed layer height</th>
+      <th>MAX Precipitation kg/m2</th>
       <th>outages</th>
       <th>customers</th>
       <th>transformers</th>
@@ -678,13 +678,324 @@ dataset
       <th>class</th>
       <th>class_customers</th>
     </tr>
+    <tr>
+      <th>point_in_time</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
+      <th>2015-11-22 16:00:00</th>
+      <td>619845</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>45.529404</td>
+      <td>22.158261</td>
+      <td>880685907764</td>
+      <td>-63472071911</td>
+      <td>263.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>513.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3063</td>
+      <td>40911</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2016-01-27 23:00:00</th>
+      <td>666775</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>1.986536</td>
+      <td>131.888932</td>
+      <td>3259752117168</td>
+      <td>-33907899104</td>
+      <td>262.0</td>
+      <td>...</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>544.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>13241</td>
+      <td>160548</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2018-03-12 21:00:00</th>
+      <td>883695</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>13.150008</td>
+      <td>349.718322</td>
+      <td>1806219642951</td>
+      <td>-783799885</td>
+      <td>261.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>315.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>199.0</td>
+      <td>2173.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2018-10-24 06:00:00</th>
+      <td>921162</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>13.193252</td>
+      <td>2.062289</td>
+      <td>3858873495496</td>
+      <td>-33958081062</td>
+      <td>262.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>535.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>13241</td>
+      <td>160548</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2017-01-02 00:00:00</th>
+      <td>776131</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>15.020581</td>
+      <td>310.955154</td>
+      <td>1345851044258</td>
+      <td>8924422476</td>
+      <td>253.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>460.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1331</td>
+      <td>21838</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2017-03-19 00:00:00</th>
+      <td>777731</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>0.452255</td>
+      <td>194.328946</td>
+      <td>3105478695001</td>
+      <td>-38627220511</td>
+      <td>257.0</td>
+      <td>...</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>617.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>13241</td>
+      <td>160548</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2013-11-13 15:00:00</th>
+      <td>398137</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>33.197548</td>
+      <td>358.345354</td>
+      <td>1140246727380</td>
+      <td>-33539134878</td>
+      <td>259.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>481.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>2111.0</td>
+      <td>14455.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2012-07-17 04:00:00</th>
+      <td>302193</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>9.389725</td>
+      <td>35.737227</td>
+      <td>1044025512360</td>
+      <td>-30495108834</td>
+      <td>281.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>267.0</td>
+      <td>0.0</td>
+      <td>2</td>
+      <td>437</td>
+      <td>7936</td>
+      <td>98319</td>
+      <td>1</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>2013-10-24 07:00:00</th>
+      <td>399847</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>12.976426</td>
+      <td>15.483334</td>
+      <td>2808040248290</td>
+      <td>-43657913308</td>
+      <td>267.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>546.0</td>
+      <td>0.0</td>
+      <td>3</td>
+      <td>648</td>
+      <td>13241</td>
+      <td>160548</td>
+      <td>2</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>2012-09-08 08:00:00</th>
+      <td>301180</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>25.135854</td>
+      <td>350.047659</td>
+      <td>2200160608030</td>
+      <td>-29090550284</td>
+      <td>274.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>688.0</td>
+      <td>0.0</td>
+      <td>4</td>
+      <td>1429</td>
+      <td>13241</td>
+      <td>160548</td>
+      <td>2</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>2015-07-31 11:00:00</th>
+      <td>619523</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>34.962486</td>
+      <td>16.475244</td>
+      <td>543420852575</td>
+      <td>-64116211901</td>
+      <td>282.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>765.0</td>
+      <td>0.0</td>
+      <td>6</td>
+      <td>2052</td>
+      <td>5111.0</td>
+      <td>57971.0</td>
+      <td>2</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>2012-07-18 16:00:00</th>
+      <td>302475</td>
+      <td>NULL</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>22.110171</td>
+      <td>170.597424</td>
+      <td>1081320700323</td>
+      <td>64107961518</td>
+      <td>280.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>604.0</td>
+      <td>0.0</td>
+      <td>7</td>
+      <td>1117</td>
+      <td>13241</td>
+      <td>160548</td>
+      <td>2</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>2010-01-03 18:00:00</th>
       <td>32276</td>
       <td>5607-WindGust-15-999</td>
-      <td>2010-01-03 18:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -692,11 +1003,12 @@ dataset
       <td>316.657149</td>
       <td>241096441088</td>
       <td>15939045602</td>
+      <td>252.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>265</td>
-      <td>26</td>
-      <td>87134</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>497.0</td>
+      <td>0.0</td>
       <td>0</td>
       <td>0</td>
       <td>16</td>
@@ -705,22 +1017,70 @@ dataset
       <td>0</td>
     </tr>
     <tr>
-      <th>14</th>
-      <td>85843</td>
-      <td>NULL</td>
-      <td>2010-10-21 14:00:00+00:00</td>
+      <th>2015-11-27 22:00:00</th>
+      <td>611183</td>
+      <td>611054-WindGust-15-999</td>
+      <td>WindGust</td>
+      <td>15</td>
+      <td>999</td>
+      <td>6.078201</td>
+      <td>0.972651</td>
+      <td>31675028</td>
+      <td>-230371049</td>
+      <td>281.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>859.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>16.0</td>
+      <td>100.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-25 21:00:00</th>
+      <td>620073</td>
+      <td>608707-WindGust-20-999</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
-      <td>6.663990</td>
-      <td>347.916194</td>
-      <td>2436625298896</td>
-      <td>67935319881</td>
+      <td>35.469293</td>
+      <td>40.191461</td>
+      <td>1735472585973</td>
+      <td>-92904035307</td>
+      <td>261.0</td>
       <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>634.0</td>
+      <td>0.0</td>
       <td>0</td>
-      <td>276</td>
-      <td>21</td>
-      <td>83531</td>
+      <td>0</td>
+      <td>4154.0</td>
+      <td>50728.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-21 22:00:00</th>
+      <td>619777</td>
+      <td>603716-WindGust-15-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>15.703814</td>
+      <td>321.853379</td>
+      <td>3052647924801</td>
+      <td>-69593631969</td>
+      <td>262.0</td>
+      <td>...</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>469.0</td>
+      <td>0.0</td>
       <td>0</td>
       <td>0</td>
       <td>13241</td>
@@ -729,22 +1089,118 @@ dataset
       <td>0</td>
     </tr>
     <tr>
-      <th>37</th>
-      <td>84838</td>
-      <td>54789-WindGust-15-999</td>
-      <td>2010-10-15 00:00:00+00:00</td>
+      <th>2015-11-27 12:00:00</th>
+      <td>620173</td>
+      <td>609586-WindGust-15-999</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
-      <td>12.006200</td>
-      <td>327.169733</td>
-      <td>2366620281872</td>
-      <td>20036629745</td>
+      <td>6.033514</td>
+      <td>237.253781</td>
+      <td>2934198077095</td>
+      <td>50604445512</td>
+      <td>267.0</td>
       <td>...</td>
-      <td>1</td>
-      <td>274</td>
-      <td>25</td>
-      <td>94320</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>798.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>13241.0</td>
+      <td>160548.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-26 10:00:00</th>
+      <td>620100</td>
+      <td>609236-WindGust-15-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>16.380546</td>
+      <td>194.133716</td>
+      <td>1577212789861</td>
+      <td>24991088955</td>
+      <td>263.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>835.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1568.0</td>
+      <td>11325.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-26 06:00:00</th>
+      <td>620092</td>
+      <td>609052-WindGust-15-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>6.589302</td>
+      <td>190.097460</td>
+      <td>1539445013269</td>
+      <td>11172733009</td>
+      <td>258.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>764.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>2796.0</td>
+      <td>20385.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-27 13:00:00</th>
+      <td>620176</td>
+      <td>610702-WindGust-20-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>4.012660</td>
+      <td>231.204280</td>
+      <td>2971332048904</td>
+      <td>37133971809</td>
+      <td>267.0</td>
+      <td>...</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>785.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>13241.0</td>
+      <td>160548.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-22 04:00:00</th>
+      <td>619794</td>
+      <td>605021-WindGust-15-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>-999.000000</td>
+      <td>32.887687</td>
+      <td>1664194863154</td>
+      <td>1664194863154</td>
+      <td>261.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>563.0</td>
+      <td>0.0</td>
       <td>0</td>
       <td>0</td>
       <td>13241</td>
@@ -753,478 +1209,70 @@ dataset
       <td>0</td>
     </tr>
     <tr>
-      <th>0</th>
-      <td>84510</td>
-      <td>NULL</td>
-      <td>2010-10-13 00:00:00+00:00</td>
+      <th>2015-11-27 10:00:00</th>
+      <td>610566</td>
+      <td>608994-WindGust-15-999</td>
+      <td>WindGust</td>
+      <td>15</td>
+      <td>999</td>
+      <td>55.638931</td>
+      <td>212.502566</td>
+      <td>881568368785</td>
+      <td>1455122876</td>
+      <td>269.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1012.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>617.0</td>
+      <td>2437.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-27 05:00:00</th>
+      <td>610309</td>
+      <td>609236-WindGust-15-999</td>
+      <td>WindGust</td>
+      <td>15</td>
+      <td>999</td>
+      <td>39.064357</td>
+      <td>1.260019</td>
+      <td>1391983639635</td>
+      <td>-90618905934</td>
+      <td>269.0</td>
+      <td>...</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>1142.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>12380.0</td>
+      <td>149702.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-21 10:00:00</th>
+      <td>619727</td>
+      <td>604096-WindGust-20-999</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
-      <td>3.033214</td>
-      <td>358.466487</td>
-      <td>1900868857186</td>
-      <td>-12640678489</td>
+      <td>18.227279</td>
+      <td>21.666144</td>
+      <td>3725023507539</td>
+      <td>2056714445</td>
+      <td>254.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>275</td>
-      <td>21</td>
-      <td>95202</td>
-      <td>0</td>
-      <td>0</td>
-      <td>24</td>
-      <td>115</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>11</th>
-      <td>54789</td>
-      <td>54789-WindGust-15-999</td>
-      <td>2010-10-15 00:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>-999.000000</td>
-      <td>16.372905</td>
-      <td>489915746</td>
-      <td>489915746</td>
-      <td>...</td>
-      <td>0</td>
-      <td>273</td>
-      <td>16</td>
-      <td>97665</td>
-      <td>0</td>
-      <td>0</td>
-      <td>233</td>
-      <td>3406</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>84522</td>
-      <td>NULL</td>
-      <td>2010-10-13 02:00:00+00:00</td>
-      <td>Pressure</td>
-      <td>0</td>
-      <td>1000</td>
-      <td>1.550326</td>
-      <td>333.340322</td>
-      <td>1869455169402</td>
-      <td>-4098074030</td>
-      <td>...</td>
-      <td>0</td>
-      <td>275</td>
-      <td>21</td>
-      <td>95258</td>
-      <td>0</td>
-      <td>0</td>
-      <td>18</td>
-      <td>64</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>30</th>
-      <td>78829</td>
-      <td>34446-WindGust-15-999</td>
-      <td>2010-09-03 06:00:00+00:00</td>
-      <td>Pressure</td>
-      <td>0</td>
-      <td>1000</td>
-      <td>21.313237</td>
-      <td>40.518348</td>
-      <td>708423069018</td>
-      <td>12149510216</td>
-      <td>...</td>
-      <td>0</td>
-      <td>284</td>
-      <td>23</td>
-      <td>96428</td>
-      <td>0</td>
-      <td>0</td>
-      <td>499</td>
-      <td>4283</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>84529</td>
-      <td>NULL</td>
-      <td>2010-10-13 03:00:00+00:00</td>
-      <td>Pressure</td>
-      <td>0</td>
-      <td>1000</td>
-      <td>7.607676</td>
-      <td>26.050411</td>
-      <td>1843938133600</td>
-      <td>-25517035802</td>
-      <td>...</td>
-      <td>0</td>
-      <td>275</td>
-      <td>20</td>
-      <td>95293</td>
-      <td>0</td>
-      <td>0</td>
-      <td>12</td>
-      <td>34</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>70680</td>
-      <td>70592-WindGust-15-999</td>
-      <td>2010-07-21 08:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>-999.000000</td>
-      <td>-999.000000</td>
-      <td>224063739</td>
-      <td>224063739</td>
-      <td>...</td>
-      <td>0</td>
-      <td>297</td>
-      <td>15</td>
-      <td>99950</td>
-      <td>0</td>
-      <td>0</td>
-      <td>170</td>
-      <td>2560</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>0</th>
-      <td>54783</td>
-      <td>52924-WindGust-20-999</td>
-      <td>2010-10-15 00:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>7.258795</td>
-      <td>318.717761</td>
-      <td>346429571503</td>
-      <td>1057325490</td>
-      <td>...</td>
-      <td>0</td>
-      <td>277</td>
-      <td>25</td>
-      <td>96922</td>
-      <td>0</td>
-      <td>0</td>
-      <td>6667</td>
-      <td>74804</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>16</th>
-      <td>84387</td>
-      <td>48404-WindGust-15-999</td>
-      <td>2010-10-12 05:00:00+00:00</td>
-      <td>Pressure</td>
-      <td>0</td>
-      <td>1000</td>
-      <td>11.114022</td>
-      <td>301.135209</td>
-      <td>1660876213947</td>
-      <td>5707522037</td>
-      <td>...</td>
-      <td>0</td>
-      <td>275</td>
-      <td>23</td>
-      <td>95075</td>
-      <td>0</td>
-      <td>0</td>
-      <td>12612</td>
-      <td>155406</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>18</th>
-      <td>84402</td>
-      <td>49113-WindGust-15-999</td>
-      <td>2010-10-12 07:00:00+00:00</td>
-      <td>Pressure</td>
-      <td>0</td>
-      <td>1000</td>
-      <td>20.303343</td>
-      <td>314.134600</td>
-      <td>1694672437789</td>
-      <td>31768577499</td>
-      <td>...</td>
-      <td>0</td>
-      <td>275</td>
-      <td>24</td>
-      <td>95064</td>
-      <td>0</td>
-      <td>0</td>
-      <td>7451</td>
-      <td>87041</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>0</th>
-      <td>71997</td>
-      <td>71997-WindGust-15-999</td>
-      <td>2010-07-22 07:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>-999.000000</td>
-      <td>355.656493</td>
-      <td>2057275953</td>
-      <td>2057275953</td>
-      <td>...</td>
-      <td>0</td>
-      <td>295</td>
-      <td>16</td>
-      <td>98505</td>
-      <td>0</td>
-      <td>0</td>
-      <td>25</td>
-      <td>71</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>19</th>
-      <td>84410</td>
-      <td>49111-WindGust-15-999</td>
-      <td>2010-10-12 08:00:00+00:00</td>
-      <td>Pressure</td>
-      <td>0</td>
-      <td>1000</td>
-      <td>115.474283</td>
-      <td>311.815278</td>
-      <td>1927523130472</td>
-      <td>232850692683</td>
-      <td>...</td>
-      <td>0</td>
-      <td>276</td>
-      <td>24</td>
-      <td>95060</td>
-      <td>0</td>
-      <td>0</td>
-      <td>4851</td>
-      <td>61495</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>72063</td>
-      <td>72004-WindGust-15-999</td>
-      <td>2010-07-22 08:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>17.833118</td>
-      <td>24.084451</td>
-      <td>12398917146</td>
-      <td>12398916911</td>
-      <td>...</td>
-      <td>0</td>
-      <td>297</td>
-      <td>16</td>
-      <td>98318</td>
-      <td>0</td>
-      <td>0</td>
-      <td>1533</td>
-      <td>9966</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>49250</td>
-      <td>48480-WindGust-15-999</td>
-      <td>2010-10-12 08:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>-999.000000</td>
-      <td>330.044362</td>
-      <td>540392904399</td>
-      <td>540392904399</td>
-      <td>...</td>
-      <td>0</td>
-      <td>278</td>
-      <td>24</td>
-      <td>97464</td>
-      <td>0</td>
-      <td>0</td>
-      <td>22</td>
-      <td>319</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>57090</td>
-      <td>56898-WindGust-15-999</td>
-      <td>2010-07-12 11:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>106.403605</td>
-      <td>14.428829</td>
-      <td>5471767322</td>
-      <td>-31026834713</td>
-      <td>...</td>
-      <td>0</td>
-      <td>302</td>
-      <td>16</td>
-      <td>99799</td>
-      <td>0</td>
-      <td>0</td>
-      <td>197</td>
-      <td>1878</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>20</th>
-      <td>84417</td>
-      <td>49335-WindGust-15-999</td>
-      <td>2010-10-12 09:00:00+00:00</td>
-      <td>Pressure</td>
-      <td>0</td>
-      <td>1000</td>
-      <td>50.306137</td>
-      <td>311.115731</td>
-      <td>2036309696320</td>
-      <td>108786565848</td>
-      <td>...</td>
-      <td>0</td>
-      <td>277</td>
-      <td>22</td>
-      <td>95073</td>
-      <td>0</td>
-      <td>0</td>
-      <td>2878</td>
-      <td>39240</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>49319</td>
-      <td>48480-WindGust-15-999</td>
-      <td>2010-10-12 09:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>80.453919</td>
-      <td>324.604673</td>
-      <td>580031939510</td>
-      <td>39639035111</td>
-      <td>...</td>
-      <td>0</td>
-      <td>279</td>
-      <td>24</td>
-      <td>97354</td>
-      <td>0</td>
-      <td>0</td>
-      <td>59</td>
-      <td>610</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>49105</td>
-      <td>48480-WindGust-15-999</td>
-      <td>2010-10-12 06:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>49.198427</td>
-      <td>288.358140</td>
-      <td>303193372078</td>
-      <td>28500177091</td>
-      <td>...</td>
-      <td>0</td>
-      <td>279</td>
-      <td>24</td>
-      <td>98309</td>
-      <td>0</td>
-      <td>0</td>
-      <td>81</td>
-      <td>801</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>18610</td>
-      <td>18592-WindGust-15-999</td>
-      <td>2010-06-20 07:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>54.315354</td>
-      <td>33.748155</td>
-      <td>9543901871</td>
-      <td>6760382568</td>
-      <td>...</td>
-      <td>0</td>
-      <td>290</td>
-      <td>18</td>
-      <td>98157</td>
-      <td>0</td>
-      <td>0</td>
-      <td>21</td>
-      <td>73</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>0</th>
-      <td>44526</td>
-      <td>44488-WindGust-15-999</td>
-      <td>2010-07-04 10:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>-999.000000</td>
-      <td>-999.000000</td>
-      <td>1475621670</td>
-      <td>1475621670</td>
-      <td>...</td>
-      <td>0</td>
-      <td>298</td>
-      <td>16</td>
-      <td>99073</td>
-      <td>0</td>
-      <td>0</td>
-      <td>67</td>
-      <td>284</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>35</th>
-      <td>84825</td>
-      <td>NULL</td>
-      <td>2010-10-14 22:00:00+00:00</td>
-      <td>Pressure</td>
-      <td>0</td>
-      <td>1000</td>
-      <td>11.769611</td>
-      <td>299.613944</td>
-      <td>2319278025627</td>
-      <td>41982579172</td>
-      <td>...</td>
-      <td>1</td>
-      <td>274</td>
-      <td>26</td>
-      <td>94341</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>532.0</td>
+      <td>0.0</td>
       <td>0</td>
       <td>0</td>
       <td>13241</td>
@@ -1233,170 +1281,146 @@ dataset
       <td>0</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td>70805</td>
-      <td>70592-WindGust-15-999</td>
-      <td>2010-07-21 10:00:00+00:00</td>
+      <th>2015-11-21 12:00:00</th>
+      <td>619738</td>
+      <td>604096-WindGust-20-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>5.991400</td>
+      <td>4.657696</td>
+      <td>3653198575532</td>
+      <td>-57971628122</td>
+      <td>254.0</td>
+      <td>...</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>548.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>13241</td>
+      <td>160548</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-27 19:00:00</th>
+      <td>620194</td>
+      <td>611054-WindGust-15-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>11.912931</td>
+      <td>201.026138</td>
+      <td>3146391230156</td>
+      <td>23132482749</td>
+      <td>262.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>749.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>13241.0</td>
+      <td>160548.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-25 14:00:00</th>
+      <td>620058</td>
+      <td>608598-WindGust-15-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>18.017911</td>
+      <td>22.684965</td>
+      <td>2200277604192</td>
+      <td>-39435675575</td>
+      <td>263.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>593.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3462.0</td>
+      <td>43393.0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2015-11-27 19:00:00</th>
+      <td>611040</td>
+      <td>609586-WindGust-15-999</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
       <td>-999.000000</td>
-      <td>-999.000000</td>
-      <td>24293747046</td>
-      <td>24293747046</td>
+      <td>219.583880</td>
+      <td>500418837814</td>
+      <td>500418837814</td>
+      <td>277.0</td>
       <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>853.0</td>
+      <td>0.0</td>
       <td>0</td>
-      <td>297</td>
-      <td>17</td>
-      <td>99061</td>
       <td>0</td>
-      <td>0</td>
-      <td>426</td>
-      <td>5983</td>
+      <td>109.0</td>
+      <td>1182.0</td>
       <td>0</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>4</th>
-      <td>70887</td>
-      <td>70592-WindGust-15-999</td>
-      <td>2010-07-21 11:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>-999.000000</td>
-      <td>-999.000000</td>
-      <td>120264951</td>
-      <td>120264951</td>
+      <th>2015-11-22 06:00:00</th>
+      <td>619802</td>
+      <td>605021-WindGust-15-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>17.031395</td>
+      <td>28.974775</td>
+      <td>1462153608130</td>
+      <td>-98227162927</td>
+      <td>260.0</td>
       <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>567.0</td>
+      <td>0.0</td>
       <td>0</td>
-      <td>299</td>
-      <td>15</td>
-      <td>99951</td>
       <td>0</td>
-      <td>0</td>
-      <td>80</td>
-      <td>1100</td>
+      <td>13241</td>
+      <td>160548</td>
       <td>0</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>2</th>
-      <td>72129</td>
-      <td>72004-WindGust-15-999</td>
-      <td>2010-07-22 09:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>9.457685</td>
-      <td>350.875408</td>
-      <td>14039783590</td>
-      <td>1640866444</td>
+      <th>2015-11-27 18:00:00</th>
+      <td>620191</td>
+      <td>611001-WindGust-15-999</td>
+      <td>Pressure</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>6.982892</td>
+      <td>214.968662</td>
+      <td>3123258747406</td>
+      <td>25761124152</td>
+      <td>263.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>297</td>
-      <td>16</td>
-      <td>98197</td>
-      <td>0</td>
-      <td>0</td>
-      <td>1420</td>
-      <td>8931</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>747.0</td>
+      <td>0.0</td>
       <td>0</td>
       <td>0</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>24874</td>
-      <td>24751-WindGust-15-999</td>
-      <td>2010-06-27 12:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>67.686609</td>
-      <td>12.513636</td>
-      <td>530684899</td>
-      <td>516914341</td>
-      <td>...</td>
-      <td>0</td>
-      <td>286</td>
-      <td>15</td>
-      <td>99948</td>
-      <td>0</td>
-      <td>0</td>
-      <td>76</td>
-      <td>428</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>24927</td>
-      <td>24680-WindGust-15-999</td>
-      <td>2010-06-27 13:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>1.790444</td>
-      <td>352.339531</td>
-      <td>273006306</td>
-      <td>3983791</td>
-      <td>...</td>
-      <td>0</td>
-      <td>286</td>
-      <td>15</td>
-      <td>98576</td>
-      <td>0</td>
-      <td>0</td>
-      <td>47</td>
-      <td>194</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>5</th>
-      <td>24939</td>
-      <td>24751-WindGust-15-999</td>
-      <td>2010-06-27 13:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>1.280821</td>
-      <td>165.158129</td>
-      <td>95247705</td>
-      <td>-435437194</td>
-      <td>...</td>
-      <td>0</td>
-      <td>287</td>
-      <td>15</td>
-      <td>100170</td>
-      <td>0</td>
-      <td>0</td>
-      <td>9</td>
-      <td>21</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>25538</td>
-      <td>25434-WindGust-15-999</td>
-      <td>2010-06-28 06:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>28.145884</td>
-      <td>316.499124</td>
-      <td>123368521587</td>
-      <td>31981922771</td>
-      <td>...</td>
-      <td>0</td>
-      <td>285</td>
-      <td>19</td>
-      <td>97046</td>
-      <td>0</td>
-      <td>0</td>
-      <td>1044</td>
-      <td>4196</td>
+      <td>13241.0</td>
+      <td>160548.0</td>
       <td>0</td>
       <td>0</td>
     </tr>
@@ -1425,34 +1449,33 @@ dataset
       <td>...</td>
     </tr>
     <tr>
-      <th>0</th>
-      <td>285757</td>
+      <th>2012-09-18 00:00:00</th>
+      <td>302836</td>
       <td>284109-WindGust-15-999</td>
-      <td>2012-09-18 00:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>15</td>
-      <td>999</td>
-      <td>21.610754</td>
-      <td>70.659599</td>
-      <td>135426415128</td>
-      <td>-25353659958</td>
-      <td>...</td>
+      <td>Pressure</td>
       <td>0</td>
-      <td>284</td>
-      <td>25</td>
-      <td>96831</td>
+      <td>1000</td>
+      <td>2.009907</td>
+      <td>358.033318</td>
+      <td>1541965893868</td>
+      <td>18658746275</td>
+      <td>271.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>536.0</td>
+      <td>0.0</td>
       <td>16</td>
       <td>11769</td>
-      <td>4667</td>
-      <td>56265</td>
+      <td>5105.0</td>
+      <td>57953.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>2013-12-13 02:00:00</th>
       <td>378777</td>
       <td>377478-WindGust-15-999</td>
-      <td>2013-12-13 02:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1460,23 +1483,23 @@ dataset
       <td>200.627121</td>
       <td>905787139333</td>
       <td>905696111976</td>
+      <td>270.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>277</td>
-      <td>29</td>
-      <td>89892</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1260.0</td>
+      <td>0.0</td>
       <td>17</td>
       <td>5696</td>
-      <td>10871</td>
-      <td>125298</td>
+      <td>10871.0</td>
+      <td>125298.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>25</th>
+      <th>2013-12-13 02:00:00</th>
       <td>400281</td>
       <td>378695-WindGust-20-999</td>
-      <td>2013-12-13 02:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1484,23 +1507,23 @@ dataset
       <td>343.341947</td>
       <td>2077809612151</td>
       <td>-21129413084</td>
+      <td>261.0</td>
       <td>...</td>
-      <td>1</td>
-      <td>272</td>
-      <td>29</td>
-      <td>91775</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>883.0</td>
+      <td>0.0</td>
       <td>17</td>
       <td>5696</td>
-      <td>13241</td>
-      <td>160548</td>
+      <td>13241.0</td>
+      <td>160548.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>9</th>
+      <th>2012-07-17 09:00:00</th>
       <td>302231</td>
       <td>NULL</td>
-      <td>2012-07-17 09:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1508,11 +1531,12 @@ dataset
       <td>0.987562</td>
       <td>909592064125</td>
       <td>-35229338158</td>
+      <td>281.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>288</td>
-      <td>14</td>
-      <td>95515</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>598.0</td>
+      <td>0.0</td>
       <td>18</td>
       <td>4129</td>
       <td>5330</td>
@@ -1521,10 +1545,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>36</th>
+      <th>2015-06-03 11:00:00</th>
       <td>556228</td>
       <td>508233-WindGust-15-999</td>
-      <td>2015-06-03 11:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1532,23 +1555,23 @@ dataset
       <td>7.167652</td>
       <td>2176803769898</td>
       <td>-36247382612</td>
+      <td>273.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>283</td>
-      <td>26</td>
-      <td>83632</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>954.0</td>
+      <td>0.0</td>
       <td>19</td>
       <td>1153</td>
-      <td>13241</td>
-      <td>160548</td>
+      <td>13241.0</td>
+      <td>160548.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>14</th>
+      <th>2015-06-03 11:00:00</th>
       <td>508218</td>
       <td>507498-WindGust-15-999</td>
-      <td>2015-06-03 11:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1556,23 +1579,23 @@ dataset
       <td>171.846102</td>
       <td>1362465206394</td>
       <td>38916104858</td>
+      <td>272.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>289</td>
-      <td>26</td>
-      <td>83632</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1659.0</td>
+      <td>0.0</td>
       <td>19</td>
       <td>1153</td>
-      <td>6380</td>
-      <td>81347</td>
+      <td>6380.0</td>
+      <td>81347.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>7</th>
+      <th>2013-10-13 08:00:00</th>
       <td>357836</td>
       <td>356365-WindGust-15-999</td>
-      <td>2013-10-13 08:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1580,23 +1603,23 @@ dataset
       <td>327.491908</td>
       <td>1065948717350</td>
       <td>152049565845</td>
+      <td>271.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>277</td>
-      <td>29</td>
-      <td>96214</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1308.0</td>
+      <td>0.0</td>
       <td>20</td>
       <td>6307</td>
-      <td>5051</td>
-      <td>57732</td>
+      <td>5051.0</td>
+      <td>57732.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>37</th>
+      <th>2015-06-03 12:00:00</th>
       <td>556285</td>
       <td>508349-WindGust-15-999</td>
-      <td>2015-06-03 12:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1604,23 +1627,23 @@ dataset
       <td>7.469488</td>
       <td>2123398738102</td>
       <td>-53405031796</td>
+      <td>273.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>283</td>
-      <td>25</td>
-      <td>83761</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>969.0</td>
+      <td>0.0</td>
       <td>23</td>
       <td>1349</td>
-      <td>13241</td>
-      <td>160548</td>
+      <td>13241.0</td>
+      <td>160548.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>17</th>
+      <th>2015-06-03 12:00:00</th>
       <td>508335</td>
       <td>507587-WindGust-20-999</td>
-      <td>2015-06-03 12:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1628,23 +1651,23 @@ dataset
       <td>188.721463</td>
       <td>1269381243125</td>
       <td>-93083963269</td>
+      <td>273.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>288</td>
-      <td>25</td>
-      <td>84182</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1609.0</td>
+      <td>0.0</td>
       <td>23</td>
       <td>1349</td>
-      <td>7817</td>
-      <td>100072</td>
+      <td>7817.0</td>
+      <td>100072.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>15</th>
+      <th>2010-05-24 14:00:00</th>
       <td>33808</td>
       <td>27383-WindGust-15-999</td>
-      <td>2010-05-24 14:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1652,11 +1675,12 @@ dataset
       <td>188.137052</td>
       <td>1176942964137</td>
       <td>165701207019</td>
+      <td>278.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>286</td>
-      <td>16</td>
-      <td>94410</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>963.0</td>
+      <td>0.0</td>
       <td>26</td>
       <td>7173</td>
       <td>13241</td>
@@ -1665,10 +1689,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>2013-10-13 05:00:00</th>
       <td>357510</td>
       <td>357341-WindGust-15-999</td>
-      <td>2013-10-13 05:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1676,23 +1699,23 @@ dataset
       <td>329.053719</td>
       <td>778382870738</td>
       <td>52514131432</td>
+      <td>270.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>276</td>
-      <td>27</td>
-      <td>89893</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1421.0</td>
+      <td>0.0</td>
       <td>27</td>
       <td>10617</td>
-      <td>4669</td>
-      <td>54840</td>
+      <td>4669.0</td>
+      <td>54840.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>15</th>
+      <th>2012-07-18 15:00:00</th>
       <td>302468</td>
       <td>NULL</td>
-      <td>2012-07-18 15:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1700,11 +1723,12 @@ dataset
       <td>161.518479</td>
       <td>1017212738805</td>
       <td>40204990080</td>
+      <td>283.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>290</td>
-      <td>22</td>
-      <td>96546</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>687.0</td>
+      <td>0.0</td>
       <td>28</td>
       <td>7350</td>
       <td>13241</td>
@@ -1713,10 +1737,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>18</th>
+      <th>2011-06-01 13:00:00</th>
       <td>91376</td>
       <td>90882-WindGust-15-999</td>
-      <td>2011-06-01 13:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1724,47 +1747,23 @@ dataset
       <td>-999.000000</td>
       <td>80578116087</td>
       <td>80578116087</td>
+      <td>290.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>298</td>
-      <td>20</td>
-      <td>98288</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1718.0</td>
+      <td>0.0</td>
       <td>32</td>
       <td>9279</td>
-      <td>2995</td>
-      <td>30442</td>
+      <td>2995.0</td>
+      <td>30442.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>18</th>
-      <td>553675</td>
-      <td>551557-WindGust-15-999</td>
-      <td>2015-05-23 13:00:00+00:00</td>
-      <td>WindGust</td>
-      <td>20</td>
-      <td>999</td>
-      <td>79.607071</td>
-      <td>14.261287</td>
-      <td>48858471181</td>
-      <td>-12167942666</td>
-      <td>...</td>
-      <td>0</td>
-      <td>283</td>
-      <td>27</td>
-      <td>96380</td>
-      <td>33</td>
-      <td>15884</td>
-      <td>4131</td>
-      <td>50937</td>
-      <td>3</td>
-      <td>3</td>
-    </tr>
-    <tr>
-      <th>44</th>
+      <th>2015-05-23 13:00:00</th>
       <td>565792</td>
       <td>551557-WindGust-15-999</td>
-      <td>2015-05-23 13:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1772,23 +1771,47 @@ dataset
       <td>4.419663</td>
       <td>750528198082</td>
       <td>-8373451434</td>
+      <td>272.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>281</td>
-      <td>27</td>
-      <td>87647</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>955.0</td>
+      <td>0.0</td>
       <td>33</td>
       <td>15884</td>
-      <td>4499</td>
-      <td>52255</td>
+      <td>4499.0</td>
+      <td>52255.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>17</th>
+      <th>2015-05-23 13:00:00</th>
+      <td>553675</td>
+      <td>551557-WindGust-15-999</td>
+      <td>WindGust</td>
+      <td>20</td>
+      <td>999</td>
+      <td>79.607071</td>
+      <td>14.261287</td>
+      <td>48858471181</td>
+      <td>-12167942666</td>
+      <td>279.0</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1736.0</td>
+      <td>0.0</td>
+      <td>33</td>
+      <td>15884</td>
+      <td>4131.0</td>
+      <td>50937.0</td>
+      <td>3</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>2015-05-23 13:00:00</th>
       <td>553660</td>
       <td>551557-WindGust-15-999</td>
-      <td>2015-05-23 13:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1796,23 +1819,23 @@ dataset
       <td>118.002760</td>
       <td>269309824337</td>
       <td>-26893453998</td>
+      <td>276.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>285</td>
-      <td>27</td>
-      <td>95666</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1599.0</td>
+      <td>0.0</td>
       <td>34</td>
       <td>16961</td>
-      <td>6598</td>
-      <td>75413</td>
+      <td>6598.0</td>
+      <td>75413.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>5</th>
+      <th>2013-10-13 06:00:00</th>
       <td>357603</td>
       <td>356571-WindGust-15-999</td>
-      <td>2013-10-13 06:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1820,23 +1843,23 @@ dataset
       <td>326.479170</td>
       <td>812569622339</td>
       <td>34186751601</td>
+      <td>270.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>276</td>
-      <td>28</td>
-      <td>96130</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1404.0</td>
+      <td>0.0</td>
       <td>37</td>
       <td>16646</td>
-      <td>5111</td>
-      <td>57971</td>
+      <td>5111.0</td>
+      <td>57971.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>13</th>
+      <th>2012-07-18 13:00:00</th>
       <td>302455</td>
       <td>NULL</td>
-      <td>2012-07-18 13:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1844,11 +1867,12 @@ dataset
       <td>19.118443</td>
       <td>924355457070</td>
       <td>15253045950</td>
+      <td>282.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>291</td>
-      <td>19</td>
-      <td>96738</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>822.0</td>
+      <td>0.0</td>
       <td>39</td>
       <td>11242</td>
       <td>13241</td>
@@ -1857,10 +1881,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>18</th>
+      <th>2010-05-24 17:00:00</th>
       <td>33819</td>
       <td>27383-WindGust-15-999</td>
-      <td>2010-05-24 17:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1868,11 +1891,12 @@ dataset
       <td>176.098751</td>
       <td>1365868053936</td>
       <td>29137274394</td>
+      <td>277.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>284</td>
-      <td>21</td>
-      <td>91396</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>667.0</td>
+      <td>0.0</td>
       <td>40</td>
       <td>10886</td>
       <td>13241</td>
@@ -1881,10 +1905,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>6</th>
+      <th>2013-12-13 03:00:00</th>
       <td>378888</td>
       <td>377478-WindGust-15-999</td>
-      <td>2013-12-13 03:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1892,23 +1915,23 @@ dataset
       <td>357.909716</td>
       <td>884833333318</td>
       <td>-20953806016</td>
+      <td>269.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>277</td>
-      <td>27</td>
-      <td>89984</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1293.0</td>
+      <td>0.0</td>
       <td>41</td>
       <td>10167</td>
-      <td>11609</td>
-      <td>134983</td>
+      <td>11609.0</td>
+      <td>134983.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>26</th>
+      <th>2013-12-13 03:00:00</th>
       <td>400285</td>
       <td>378695-WindGust-20-999</td>
-      <td>2013-12-13 03:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1916,23 +1939,23 @@ dataset
       <td>343.556301</td>
       <td>2056731884438</td>
       <td>-21077727712</td>
+      <td>264.0</td>
       <td>...</td>
-      <td>1</td>
-      <td>272</td>
-      <td>27</td>
-      <td>93788</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>904.0</td>
+      <td>0.0</td>
       <td>42</td>
       <td>10441</td>
-      <td>13241</td>
-      <td>160548</td>
+      <td>13241.0</td>
+      <td>160548.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>17</th>
+      <th>2010-05-24 16:00:00</th>
       <td>33815</td>
       <td>28099-WindGust-15-999</td>
-      <td>2010-05-24 16:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1940,11 +1963,12 @@ dataset
       <td>197.269295</td>
       <td>1336730779543</td>
       <td>58641269050</td>
+      <td>277.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>285</td>
-      <td>17</td>
-      <td>93738</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>771.0</td>
+      <td>0.0</td>
       <td>42</td>
       <td>8632</td>
       <td>13241</td>
@@ -1953,10 +1977,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>10</th>
+      <th>2011-06-01 11:00:00</th>
       <td>91220</td>
       <td>90882-WindGust-15-999</td>
-      <td>2011-06-01 11:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -1964,23 +1987,23 @@ dataset
       <td>-999.000000</td>
       <td>109593620209</td>
       <td>109593620209</td>
+      <td>291.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>299</td>
-      <td>21</td>
-      <td>98166</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1843.0</td>
+      <td>0.0</td>
       <td>42</td>
       <td>14832</td>
-      <td>4357</td>
-      <td>52150</td>
+      <td>4357.0</td>
+      <td>52150.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>14</th>
+      <th>2012-07-18 14:00:00</th>
       <td>302461</td>
       <td>NULL</td>
-      <td>2012-07-18 14:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -1988,11 +2011,12 @@ dataset
       <td>150.780095</td>
       <td>977007748724</td>
       <td>52652291654</td>
+      <td>283.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>290</td>
-      <td>21</td>
-      <td>96563</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>751.0</td>
+      <td>0.0</td>
       <td>43</td>
       <td>12981</td>
       <td>13241</td>
@@ -2001,10 +2025,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>16</th>
+      <th>2010-05-24 15:00:00</th>
       <td>33811</td>
       <td>27383-WindGust-15-999</td>
-      <td>2010-05-24 15:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -2012,11 +2035,12 @@ dataset
       <td>203.560972</td>
       <td>1278089510493</td>
       <td>101146546356</td>
+      <td>278.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>286</td>
-      <td>16</td>
-      <td>94120</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>899.0</td>
+      <td>0.0</td>
       <td>55</td>
       <td>19045</td>
       <td>13241</td>
@@ -2025,10 +2049,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>12</th>
+      <th>2012-07-18 12:00:00</th>
       <td>302448</td>
       <td>NULL</td>
-      <td>2012-07-18 12:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -2036,11 +2059,12 @@ dataset
       <td>159.561444</td>
       <td>909102411120</td>
       <td>73606522730</td>
+      <td>282.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>290</td>
-      <td>17</td>
-      <td>96729</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>859.0</td>
+      <td>0.0</td>
       <td>58</td>
       <td>20265</td>
       <td>13241</td>
@@ -2049,10 +2073,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>6</th>
+      <th>2013-10-13 07:00:00</th>
       <td>357719</td>
       <td>357345-WindGust-15-999</td>
-      <td>2013-10-13 07:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -2060,23 +2083,23 @@ dataset
       <td>328.960855</td>
       <td>913899151504</td>
       <td>101329529165</td>
+      <td>270.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>277</td>
-      <td>29</td>
-      <td>96145</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1350.0</td>
+      <td>0.0</td>
       <td>60</td>
       <td>22637</td>
-      <td>5111</td>
-      <td>57971</td>
+      <td>5111.0</td>
+      <td>57971.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>14</th>
+      <th>2011-06-01 12:00:00</th>
       <td>91295</td>
       <td>90882-WindGust-15-999</td>
-      <td>2011-06-01 12:00:00+00:00</td>
       <td>WindGust</td>
       <td>15</td>
       <td>999</td>
@@ -2084,23 +2107,23 @@ dataset
       <td>-999.000000</td>
       <td>104964291709</td>
       <td>104964291709</td>
+      <td>290.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>298</td>
-      <td>21</td>
-      <td>98342</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1812.0</td>
+      <td>0.0</td>
       <td>75</td>
       <td>22328</td>
-      <td>4202</td>
-      <td>49336</td>
+      <td>4202.0</td>
+      <td>49336.0</td>
       <td>3</td>
       <td>3</td>
     </tr>
     <tr>
-      <th>11</th>
+      <th>2012-07-18 11:00:00</th>
       <td>302442</td>
       <td>NULL</td>
-      <td>2012-07-18 11:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -2108,11 +2131,12 @@ dataset
       <td>146.906255</td>
       <td>835495888390</td>
       <td>29279167082</td>
+      <td>282.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>290</td>
-      <td>17</td>
-      <td>96747</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>830.0</td>
+      <td>0.0</td>
       <td>83</td>
       <td>27791</td>
       <td>12946</td>
@@ -2121,10 +2145,9 @@ dataset
       <td>3</td>
     </tr>
     <tr>
-      <th>10</th>
+      <th>2012-07-18 10:00:00</th>
       <td>302435</td>
       <td>NULL</td>
-      <td>2012-07-18 10:00:00+00:00</td>
       <td>Pressure</td>
       <td>0</td>
       <td>1000</td>
@@ -2132,11 +2155,12 @@ dataset
       <td>347.163683</td>
       <td>806216721308</td>
       <td>806216721308</td>
+      <td>282.0</td>
       <td>...</td>
-      <td>0</td>
-      <td>290</td>
-      <td>16</td>
-      <td>96814</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>835.0</td>
+      <td>0.0</td>
       <td>114</td>
       <td>29915</td>
       <td>11595</td>
@@ -2146,7 +2170,7 @@ dataset
     </tr>
   </tbody>
 </table>
-<p>24726 rows × 55 columns</p>
+<p>24557 rows × 51 columns</p>
 </div>
 
 
@@ -2156,7 +2180,8 @@ dataset
 
 ```python
 save_dataset(dataset)
-dataset.set_index('point_in_time', inplace=True) # This is called also inside load_dataset
+if 'point_in_time' in dataset.columns:
+    dataset.set_index('point_in_time', inplace=True) # This is called also inside load_dataset
 ```
 
     Storing classification set to db sasse.classification_dataset...
@@ -2387,26 +2412,26 @@ df.plot(kind='scatter', x='nro_polygons', y='outages', ax=ax, c='green')
 First, if number of outages is 0, the class is 0. Rest of the dataset could be divided to classes following (based on the first ploit): 
 
 Class 1:   1 - 250  outages<br>
-Class 2: 251 - 500  outages<br>
-Class 3: 501 -      outages<br>
+Class 2: 251 - 750  outages<br>
+Class 3: 751 -      outages<br>
 
 We can also classify the data based on number of customers respectively (based on the second plot): 
 
-Class 1:    1 -  500 cusomters<br>
-Class 2:  501 - 2500 customers<br>
-Class 3: 2501 -     customers <br>
+Class 1:    1 - 1000 customers<br>
+Class 2: 1001 - 3000 customers<br>
+Class 3: 3001 -      customers <br>
 
 
 ```python
 # outages
-limits = [(0,0), (1,250), (251,500), (501, 9999999)]
+limits = [(0,0), (1,250), (251,750), (751, 9999999)]
 i = 0
 for low, high in limits:
     ene_dataset.loc[(ene_dataset.loc[:, 'outages'] >= low) & (ene_dataset.loc[:, 'outages'] <= high), 'class'] = i
     i += 1
     
 # outages
-limits = [(0,1), (1,500), (501,2500), (2501, 9999999)]
+limits = [(0,1), (1,1000), (1001,3000), (3001, 9999999)]
 i = 0
 for low, high in limits:
     ene_dataset.loc[(ene_dataset.loc[:, 'customers'] >= low) & (ene_dataset.loc[:, 'customers'] <= high), 'class_customers'] = i
@@ -2417,43 +2442,64 @@ print(ene_dataset.head())
 print(ene_dataset.shape)
 ```
 
-             id                storm_id              point_in_time  \
-    0      4576    4576-WindGust-15-999  2010-01-01 00:00:00+00:00   
-    117  482137  481833-WindGust-15-999  2014-10-23 00:00:00+00:00   
-    116  482083  481833-WindGust-15-999  2014-10-22 23:00:00+00:00   
-    115  482082  481465-WindGust-15-999  2014-10-22 23:00:00+00:00   
-    114  482099  478047-WindGust-15-999  2014-10-22 23:00:00+00:00   
+                                   id                storm_id weather_parameter  \
+    point_in_time                                                                 
+    2010-01-01 00:00:00+00:00    4576    4576-WindGust-15-999          WindGust   
+    2014-10-23 00:00:00+00:00  482137  481833-WindGust-15-999          WindGust   
+    2014-10-22 23:00:00+00:00  482083  481833-WindGust-15-999          WindGust   
+    2014-10-22 23:00:00+00:00  482082  481465-WindGust-15-999          WindGust   
+    2014-10-22 23:00:00+00:00  482099  478047-WindGust-15-999          WindGust   
     
-        weather_parameter low_limit high_limit  speed_self  angle_self  \
-    0            WindGust        15        999 -999.000000 -999.000000   
-    117          WindGust        15        999    2.393847  336.148021   
-    116          WindGust        15        999    3.264672  165.229990   
-    115          WindGust        15        999    3.069429  172.936362   
-    114          WindGust        20        999   10.211669   14.969946   
+                              low_limit high_limit  speed_self  angle_self  \
+    point_in_time                                                            
+    2010-01-01 00:00:00+00:00        15        999 -999.000000 -999.000000   
+    2014-10-23 00:00:00+00:00        15        999    2.393847  336.148021   
+    2014-10-22 23:00:00+00:00        15        999    3.264672  165.229990   
+    2014-10-22 23:00:00+00:00        15        999    3.069429  172.936362   
+    2014-10-22 23:00:00+00:00        20        999   10.211669   14.969946   
     
-              area_m2    area_diff  ... MAX Wind gust  MAX Temperature  \
-    0       282711750         -999  ...            15              267   
-    117   62408552814   2425513709  ...            17              278   
-    116   59983039105     92091335  ...            17              278   
-    115  745270279353  47217898519  ...            28              285   
-    114    9187397687  -2551154565  ...            22              272   
+                                    area_m2    area_diff MIN Temperature  ...  \
+    point_in_time                                                         ...   
+    2010-01-01 00:00:00+00:00     282711750         -999             267  ...   
+    2014-10-23 00:00:00+00:00   62408552814   2425513709             271  ...   
+    2014-10-22 23:00:00+00:00   59983039105     92091335             272  ...   
+    2014-10-22 23:00:00+00:00  745270279353  47217898519             265  ...   
+    2014-10-22 23:00:00+00:00    9187397687  -2551154565             267  ...   
     
-        SUM Snowfall AVG Snowdepth AVG Mixed layer height MAX Precipitation kg/m2  \
-    0              0             0                    990                       0   
-    117            0             0                    921                       0   
-    116            0             0                    903                       0   
-    115            0             0                   1010                       0   
-    114            0             0                    753                       0   
+                               MAX Wind gust MAX Temperature SUM Snowfall  \
+    point_in_time                                                           
+    2010-01-01 00:00:00+00:00             15             267            0   
+    2014-10-23 00:00:00+00:00             17             278            0   
+    2014-10-22 23:00:00+00:00             17             278            0   
+    2014-10-22 23:00:00+00:00             28             285            0   
+    2014-10-22 23:00:00+00:00             22             272            0   
     
-        outages customers class class_customers  
-    0         0         0     0               0  
-    117       0         0     0               0  
-    116       0         0     0               0  
-    115       0         0     0               0  
-    114       0         0     0               0  
+                              AVG Snowdepth AVG Mixed layer height  \
+    point_in_time                                                    
+    2010-01-01 00:00:00+00:00             0                    990   
+    2014-10-23 00:00:00+00:00             0                    921   
+    2014-10-22 23:00:00+00:00             0                    903   
+    2014-10-22 23:00:00+00:00             0                   1010   
+    2014-10-22 23:00:00+00:00             0                    753   
     
-    [5 rows x 50 columns]
-    (142876, 50)
+                              MAX Precipitation kg/m2 outages customers class  \
+    point_in_time                                                               
+    2010-01-01 00:00:00+00:00                       0       0         0     0   
+    2014-10-23 00:00:00+00:00                       0       0         0     0   
+    2014-10-22 23:00:00+00:00                       0       0         0     0   
+    2014-10-22 23:00:00+00:00                       0       0         0     0   
+    2014-10-22 23:00:00+00:00                       0       0         0     0   
+    
+                              class_customers  
+    point_in_time                              
+    2010-01-01 00:00:00+00:00               0  
+    2014-10-23 00:00:00+00:00               0  
+    2014-10-22 23:00:00+00:00               0  
+    2014-10-22 23:00:00+00:00               0  
+    2014-10-22 23:00:00+00:00               0  
+    
+    [5 rows x 49 columns]
+    (142876, 49)
 
 
 #### Save/load dataset
@@ -2461,8 +2507,12 @@ print(ene_dataset.shape)
 
 ```python
 save_dataset(ene_dataset, table_name='classification_dataset_energiateollisuus')
-dataset.set_index('point_in_time', inplace=True) # This is called also inside load_dataset
+if 'point_in_time' in ene_dataset.columns:
+    ene_dataset.set_index('point_in_time', inplace=True) # This is called also inside load_dataset
 ```
+
+    Storing classification set to db sasse.classification_dataset_energiateollisuus...
+
 
 Load ready dataset from database:
 
@@ -2836,7 +2886,7 @@ df.groupby(by=['weather_parameter', 'low_limit']).count()['id'].plot(kind='bar',
 
 
 
-    <matplotlib.axes._subplots.AxesSubplot at 0x7faa82319cf8>
+    <matplotlib.axes._subplots.AxesSubplot at 0x7faa78442828>
 
 
 
