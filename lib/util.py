@@ -1,13 +1,190 @@
 import numpy as np
-import os, math, pyproj, yaml
+import os, math, pyproj, yaml, logging, joblib, dask
 from shapely.ops import transform
 from functools import partial
+import pandas as pd
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, mean_squared_error, mean_absolute_error, r2_score, classification_report
 
-def get_savepath(options):
+def evaluate(model, options, data=None, dataset_file=None, fh=None, viz=None):
     """
-    Get savepath based on given options
+    Evaluate dataset
     """
-    return options.model_savepath +'/'+options.model
+
+    if data is not None:
+        X, y = data
+    else:
+        data = pd.read_csv(options.dataset_file)
+        data = data.loc[data['weather_parameter'] == 'WindGust']
+
+        X = data_train.loc[:, options.feature_params]
+        y = data_train.loc[:, options.label].values.ravel()
+
+    y_pred = model.predict(X)
+    y_pred_proba = model.predict_proba(X)
+
+    acc = accuracy_score(y, y_pred)
+    precision = precision_score(y, y_pred, average='macro')
+    recall = recall_score(y, y_pred, average='macro')
+    f1 = f1_score(y, y_pred, average='macro')
+
+    logging.info('Accuracy: {}'.format(acc))
+    logging.info('Precision: {}'.format(precision))
+    logging.info('Recall: {}'.format(recall))
+    logging.info('F1 score: {}'.format(f1))
+
+    if fh is not None:
+        error_data = {'acc': [acc],
+                      'precision': [precision],
+                      'recall': [recall],
+                      'f1': [f1]}
+        fname = '{}/test_validation_errors.csv'.format(options.output_path)
+        fh.write_csv(error_data, filename=fname)
+
+    # Confusion matrices
+    fname = '{}/confusion_matrix_testset.png'.format(options.output_path)
+    viz.plot_confusion_matrix(y, y_pred, np.arange(4), filename=fname)
+
+    fname = '{}/confusion_matrix_testset_normalised.png'.format(options.output_path)
+    viz.plot_confusion_matrix(y, y_pred, np.arange(4), True, filename=fname)
+
+    # Precision-recall curve
+    fname = '{}/precision-recall-curve_testset.png'.format(options.output_path)
+    viz.prec_rec_curve(y, y_pred_proba, n_classes=4, filename=fname)
+
+    # ROC
+    fname = '{}/roc_testset.png'.format(options.output_path)
+    viz.plot_roc(y, y_pred_proba, n_classes=4, filename=fname)
+
+    # Feature importance
+    if options.model == 'rfc':
+        fname = '{}/feature_importance.png'.format(options.output_path)
+        viz.rfc_feature_importance(model.feature_importances_, fname, feature_names=options.feature_params)
+
+    logging.info('Validation report:\n{}'.format(classification_report(y_pred, y)))
+
+def rfc_param_grid():
+    param_grid = {"n_estimators": [10, 100, 200, 800],
+                  "max_depth": [3, 20, None],
+                  "max_features": ["auto", "sqrt", "log2", None],
+                  "min_samples_split": [2,5,10],
+                  "min_samples_leaf": [1, 2, 4, 10],
+                  "bootstrap": [True, False]}
+    return param_grid
+
+def cv(X, y, model, options, fh):
+    """
+    Cross-validate
+
+    X : DataFrame | Array
+        Features
+    y : list
+        labels
+    model : obj
+            scikit model
+   options : obj
+             options with at leas model, n_iter_search and output_path attributes
+    fh : FileHandler
+         file handler instance to report and store results
+
+    return : model
+    """
+
+    if options.model == 'rfc':
+        param_grid = rfc_param_grid()
+    else:
+        raise Exception("Not implemented")
+
+    random_search = RandomizedSearchCV(model,
+                                       param_distributions=param_grid,
+                                       n_iter=int(options.n_iter_search),
+                                       scoring=['f1_macro', 'f1_micro', 'accuracy', 'precision', 'recall'],
+                                       return_train_score=True,
+                                       refit='f1_macro',
+                                       n_jobs=-1)
+
+    logging.info('Starting 5-fold random search cross validation with {} iterations... X size is {}.'.format(options.n_iter_search, len(X)))
+    with joblib.parallel_backend('dask'):
+        random_search.fit(X, y)
+
+    logging.info("RandomizedSearchCV done.")
+
+    fname = options.output_path+'/random_search_cv_results.txt'
+    fh.report_cv_results(random_search.cv_results_, filename=fname)
+
+    return random_search.best_estimator_
+
+def feature_selection(X, y, model, options, fh):
+    """
+    Run feature selection process following:
+    1. find feature importance by fitting RFC
+    2. drop least important features one-by-one and run CV for new, supressed, dataset
+    3. Store CV score of each step and draw graph
+    """
+
+    logging.info('Starting feature selection process...')
+
+    logging.info('..traingin {} with {} samples'.format(options.model, len(X)))
+    with joblib.parallel_backend('dask'):
+        model.fit(X, y)
+
+    # Sort feature importances in descending order and rearrange feature names accordingly
+    indices = np.argsort(model.feature_importances_)[::1]
+    names = [options.feature_params[i] for i in indices]
+
+    cv_results = None
+    param_grid = rfc_param_grid()
+    logging.info('..performing cv search...')
+    #for i in range(0,len(names)-4):
+    for i in range(0,5):
+        logging.info('...with {} parameters'.format(len(names)-i))
+        data = X.loc[:,names[i:]]
+        random_search = RandomizedSearchCV(model,
+                                           param_distributions=param_grid,
+                                           n_iter=int(options.n_iter_search),
+                                           scoring=['f1_macro', 'f1_micro', 'accuracy'],
+                                           return_train_score=True,
+                                           refit=False,
+                                           n_jobs=-1)
+
+        try:
+            with joblib.parallel_backend('dask'):
+                random_search.fit(data, y)
+        except AttributeError:
+            logging.warning('AttributeError while fitting. Trying again.')
+            with joblib.parallel_backend('dask'):
+                random_search.fit(data, y)
+
+        if cv_results is None:
+            cv_results = pd.DataFrame(random_search.cv_results_) #.head(1)
+            cv_results['Number of parameters'] = len(names)-i
+        else:
+            res_df = pd.DataFrame(random_search.cv_results_) #.head(1)
+            res_df['Number of parameters'] = len(names)-i
+            cv_results = pd.concat([cv_results, res_df], ignore_index=True)
+
+        #cv_results.append(dask.delayed(train)(random_search, data, y))
+
+    #cv_results = dask.compute(*cv_results)
+    logging.info('..cv search done')
+    print(cv_results)
+    cv_results.sort_values(by=['mean_test_f1_macro'], inplace=True)
+    print(cv_results)
+
+    # Save and visualise results
+    fname = '{}/feature_selection_results.csv'.format(options.output_path)
+    fh.df_to_csv(cv_results, fname, fname)
+
+    logging.info('..refitting with best model params')
+    model.set_params(**cv_results.loc[0,'params'])
+    params = names[cv_results.loc[0, 'Number of parameters']:]
+    data = X.loc[:, params]
+
+    with joblib.parallel_backend('dask'):
+        model.fit(data, y)
+
+    return model, params
+
 
 def get_param_names(config_filename, shortnames=True):
     """ Get param names, partly from config and partly as hard coded """

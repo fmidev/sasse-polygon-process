@@ -3,7 +3,7 @@
 CSV file handler
 """
 import sys, logging, os, boto3
-#import numpy as np
+import numpy as np
 #import datetime
 #from configparser import ConfigParser
 #import pandas.io.sql as sqlio
@@ -33,15 +33,21 @@ class FileHandler(object):
             resource = boto3.resource('s3')
             self.bucket = resource.Bucket(self.bucket_name)
 
-    def dataset_from_csv(self, filename):
+    def dataset_from_csv(self, filename, time_column='point_in_time'):
         """
         Read dataset from csv file
+
+        filename : str
+                   filename to use
+
+        return DataFrame
         """
-        pass
+        return pd.from_csv(filename, parse_dates=[time_column])
 
     def load_model(self, save_path, force=False):
         """ Load model from given path """
         filename = save_path + '/model.joblib'
+        logging.info('Loading model from {}...'.format(filename))
         self._download_from_bucket(filename, filename, force=False)
         return load(filename)
 
@@ -146,3 +152,57 @@ class FileHandler(object):
                 logging.info('Downloaded {} to {}'.format(ext_filename, local_filename))
             except:
                 logging.warning('Downloading failed')
+
+                i += 1
+
+    def write_csv(self, _dict, filename):
+        """
+        Write dict to csv
+
+        _dict : dict
+                data in format ['key': [values], 'key2': values]
+        filename : str
+                   filename where data is saved
+        """
+        with open(filename, 'w') as f:
+            f.write('"'+'";"'.join(_dict.keys())+'"\n')
+            for i in np.arange(len(_dict[list(_dict.keys())[0]])):
+                values = []
+                for col in _dict.keys():
+                    try:
+                        values.append(str(_dict[col][i]))
+                    except IndexError as e:
+                        # LSTM don't have first times available because of lacking history
+                        pass
+                f.write(';'.join(values)+'\n')
+
+        logging.info('Wrote {}'.format(filename))
+        self._upload_to_bucket(filename, filename)
+
+    def report_cv_results(self, results, scores=['score'], filename=None, n_top=5):
+        """
+        Report CV results and save them to file
+        """
+        res = ""
+        for score in scores:
+
+            res += "{}\n".format(score)
+            res += "-------------------------------\n"
+            for i in range(1, n_top + 1):
+                candidates = np.flatnonzero(results['rank_test_{}'.format(score)] == i)
+                for candidate in candidates:
+                    res += "Model with rank: {0}\n".format(i)
+                    res += "Mean validation {0}: {1:.3f} (std: {2:.3f})\n".format(
+                        score,
+                        results['mean_test_{}'.format(score)][candidate],
+                        results['std_test_{}'.format(score)][candidate])
+                    res += "Parameters: {0}\n".format(results['params'][candidate])
+                    res += "\n"
+
+        if filename is not None:
+            with open(filename, 'w') as f:
+                f.write(res)
+
+            self._upload_to_bucket(filename, filename)
+
+        logging.info(res)

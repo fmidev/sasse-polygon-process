@@ -2,7 +2,7 @@ version: '3'
 services:
   jup:
     volumes:
-      - ~/Dropbox/tyot/sasse:/home/jovyan/work
+      - .:/home/jovyan/work
     environment:
       PYTHONUNBUFFERED: 1
     image: tervo/pystan
@@ -38,11 +38,11 @@ services:
       AWS_ACCESS_KEY_ID: ***REMOVED***
       AWS_SECRET_ACCESS_KEY: ***REMOVED***
     build:
-      context: ./tracker
+      context: ./classifier
       dockerfile: Dockerfile
     container_name: classifier
     image: sasse:classifier
-    command: python -u classifier/train_classifier.py --starttime ${StartTime:-2011-12-30T21:00:00} --endtime ${EndTime:-2011-12-30T23:00:00} --db_config_name ${db_config_name:-local}
+    command: python -u classifier/train_classifier.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test}
 
   classify:
     volumes:
@@ -51,8 +51,21 @@ services:
       AWS_ACCESS_KEY_ID: ***REMOVED***
       AWS_SECRET_ACCESS_KEY: ***REMOVED***
     build:
-      context: ./tracker
+      context: ./classifier
       dockerfile: Dockerfile
     container_name: classifier
     image: sasse:classifier
     command: python -u classifier/classify.py --starttime ${StartTime:-2011-12-30T21:00:00} --endtime ${EndTime:-2011-12-30T23:00:00} --db_config_name ${db_config_name:-local}
+
+  evaluate:
+    volumes:
+      - .:/usr/src/app:Z
+    environment:
+      AWS_ACCESS_KEY_ID: ***REMOVED***
+      AWS_SECRET_ACCESS_KEY: ***REMOVED***
+    build:
+      context: ./classifier
+      dockerfile: Dockerfile
+    container_name: evaluator
+    image: sasse:classifier
+    command: python -u classifier/evaluate.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test}

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import sys, argparse, logging
+import sys, argparse, logging, joblib
 sys.path.insert(0, 'lib/')
 from dbhandler import DBHandler
 from filehandler import FileHandler
@@ -11,73 +11,82 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
 
+from dask.distributed import Client, progress
+
 from model.logical import Logical
-from util import get_param_names, get_savepath
+from util import cv, evaluate, feature_selection
+from config import read_options
+from viz import Viz
 
 def main():
 
-    # Read in data and extract data arrays
-    #logging.info("Reading input files.")
+    if hasattr(options, 'dask'): client = Client('{}:8786'.format(options.dask))
+    else: client = Client()
+        #processes=False, threads_per_worker=4,
+        #            n_workers=1, memory_limit='2GB')
 
-    dbh = DBHandler(options.db_config_filename, options.db_config_name)
-    dbh.return_df = False
     fh = FileHandler() #s3_bucket='fmi-sasse-classification-dataset')
+    viz = Viz()
 
-    starttime = dt.datetime.strptime(options.starttime, "%Y-%m-%dT%H:%M:%S")
-    endtime = dt.datetime.strptime(options.endtime, "%Y-%m-%dT%H:%M:%S")
-
-    features, meta_params, lables, all_params = get_param_names(options.param_config_filename)
-
-    data = pd.DataFrame(dbh.get_dataset(all_params), columns=all_params)
-    #data = classify(data)
-    #print(data)
+    data = pd.read_csv(options.dataset_file)
     data = data.loc[data['weather_parameter'] == 'WindGust']
-    data_train, data_test = train_test_split(data)
 
-    X_train = data_train.loc[:, features]
-    y_train = data_train.loc[:, options.label]
+    if options.debug:
+        y = data.loc[:, options.label].values.ravel()
+        data_train, data_test, _, __ = train_test_split(data, y, train_size=1000, test_size=1000, stratify=y)
+    else:
+        data_train, data_test = train_test_split(data)
 
-    X_test = data_test.loc[:, features]
-    y_test = data_test.loc[:, options.label]
+    X_train = data_train.loc[:, options.feature_params]
+    y_train = data_train.loc[:, options.label].values.ravel()
+
+    X_test = data_test.loc[:, options.feature_params]
+    y_test = data_test.loc[:, options.label].values.ravel()
 
     if options.model == 'Logical':
         model = Logical()
-    elif options.model == 'RFC':
+    elif options.model == 'rfc':
         model = RandomForestClassifier(n_jobs=-1)
     else:
-        raise "Model not implemented"
+        raise Exception("Model not implemented")
 
-    logging.info('Traingin {} with {} samples...'.format(options.model, len(X_train)))
-    model.fit(X_train, y_train)
+    if options.cv:
+        model = cv(X_train, y_train, model, options, fh)
+    elif options.feature_selection:
+        model, params = feature_selection(X_train, y_train, model, options, fh)
+        logging.info('Best model got with params {}'.format(','.join(params)))
+    else:
+        logging.info('Traingin {} with {} samples...'.format(options.model, len(X_train)))
+        with joblib.parallel_backend('dask'):
+            model.fit(X_train, y_train)
 
     y_pred_train = model.predict(X_train)
     logging.info('Training report:\n{}'.format(classification_report(y_pred_train, y_train)))
 
-    y_pred = model.predict(X_test)
+    #y_pred = model.predict(X_test)
 
-    logging.info('Validatio report:\n{}'.format(classification_report(y_pred, y_test)))
+    logging.info('Performance for validation data:')
+    evaluate(model, options, data=(X_test, y_test), fh=fh, viz=viz)
 
-    model_savepath = get_savepath(options)
-    fh.save_model(model, model_savepath)
+    # logging.info('Validation report:\n{}'.format(classification_report(y_pred, y_test)))
+    if hasattr(options, 'test_dataset'):
+        logging.info('Performance for {}:'.format(options.test_dataset))
+        evaluate(model, options, dataset_file=options.test_dataset, fh=fh, viz=viz)
+
+    fh.save_model(model, options.save_path)
 
 if __name__ =='__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--starttime', type=str, default='2011-02-01T00:00:00', help='Start time of the classification data interval')
-    parser.add_argument('--endtime', type=str, default='2011-03-01T00:00:00', help='End time of the classification data interval')
-    parser.add_argument('--db_config_filename', type=str, default='cnf/sasse_aws.yaml', help='CNF file containing DB connection pararemters')
-    parser.add_argument('--db_config_name', type=str, default='production', help='Section name in db cnf file to read connection parameters')
-    parser.add_argument('--param_config_filename', type=str, default='cnf/smartmet.yaml', help='Param config filename')
-    parser.add_argument('--dataset_file', type=str, default='data/classification_dataset_loiste_jse.csv', help='If set, read dataset from csv file')
-    parser.add_argument('--model_savepath', type=str, default='models', help='If set, read dataset from csv file')
-    parser.add_argument('--model', type=str, default='RFC', help='Classifier')
-    parser.add_argument('--label', type=str, default='class', help='Classifier')
+    parser.add_argument('--config_filename', type=str, default='cnf/rfc.ini', help='Config filename for training config')
+    parser.add_argument('--config_name', type=str, default='test', help='Config section for training config')
 
     if len(sys.argv) <= 1:
         parser.print_help()
         sys.exit()
 
     options = parser.parse_args()
+    read_options(options)
 
     logging.basicConfig(format=("[%(levelname)s] %(asctime)s %(filename)s:%(funcName)s:%(lineno)s %(message)s"),
                         level=logging.INFO)
