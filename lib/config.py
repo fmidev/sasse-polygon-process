@@ -69,6 +69,7 @@ def read_options(options):
         _bval('whiten')
         _bval('normalize')
         _bval('balance')
+        _bval('smote')
         _bval('evaluate')
         _bval('save_data')
         _intval('n_iter_search', 10)

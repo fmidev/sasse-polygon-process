@@ -55,17 +55,30 @@ class FileHandler(object):
         """
         Save model to given path
         """
+        fname = save_path + '/model.joblib'
+        self.save_scikit_file(model, fname)
+
+    def save_scaler(self, scaler, save_path):
+        """ Save scikit scaler """
+
+        fname = save_path + '/scaler.joblib'
+        self.save_scikit_file(scaler, fname)
+
+    def save_scikit_file(self, model, fname):
+        """ Save scikit file """
+
+        save_path = os.path.dirname(os.path.abspath(fname))
+
         if not os.path.exists(save_path):
             os.mkdir(save_path)
 
-        filename = save_path + '/model.joblib'
-        dump(model, filename)
-        logging.info('Saved model to {}'.format(filename))
+        dump(model, fname)
+        logging.info('Saved to {}'.format(fname))
 
         if self.s3:
-            self._upload_to_bucket(filename, filename)
+            self._upload_to_bucket(fname, fname)
 
-    def df_to_csv(self, df, local_filename, ext_filename=None, store_header=True):
+    def df_to_csv(self, df, local_filename, store_header=True):
         """
         Store Pandas DataFrame to csv file and upload it to bucket if ext_filename is set
         """
@@ -76,18 +89,15 @@ class FileHandler(object):
             open(local_filename, 'a').close()
             logging.info('No data, created empty file {}'.format(local_filename))
 
-        if ext_filename is not None:
-            self._upload_to_bucket(local_filename, ext_filename)
+        if self.s3:
+            self._upload_to_bucket(local_filename, local_filename)
 
     def _upload_dir_to_bucket(self, path, ext_path):
         """
         Upload all files from folder to bucket
         """
-        if self.s3:
-            raise ValueError('S3 not implemented')
-        if self.gs:
-            for file in os.listdir(path):
-                self._upload_to_bucket(path+'/'+file, ext_path+'/'+file)
+        for file in os.listdir(path):
+            self._upload_to_bucket(path+'/'+file, ext_path+'/'+file)
 
     def _upload_to_bucket(self, filename, ext_filename):
         """
@@ -120,7 +130,10 @@ class FileHandler(object):
             logging.info('Path {} already exists. Overwriting...'.format(local_path))
 
         if self.s3:
-            raise ValueError('S3 not implemented')
+             for object in self.bucket.objects.filter(Prefix = remoteDirectoryName):
+                 local_name = object.key.replace(ext_path, local_path)
+                 self._download_from_bucket(object.key, local_name)
+
         if self.gs:
             storage_client = storage.Client()
             bucket = storage_client.get_bucket(self.bucket_name)

@@ -1,0 +1,11 @@
+FROM sasse:classifier
+
+ADD classifier /usr/src/app/classifier
+ADD cnf /usr/src/app/cnf
+ADD data/classification_dataset_energiateollisuus.csv /usr/src/app/data/classification_dataset_energiateollisuus.csv
+ADD data/classification_dataset_loiste_jse.csv /usr/src/app/data/classification_dataset_loiste_jse.csv
+ADD lib /usr/src/app/lib
+
+RUN chmod 777 .
+
+CMD python -u classifier/train_classifier.py --config_filename cnf/svc.ini --config_name loiste_jse_smote_1

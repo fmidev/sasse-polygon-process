@@ -8,7 +8,9 @@ ENV C_INCLUDE_PATH=/usr/include/gdal
 RUN pip install --upgrade numpy psycopg2-binary opencv-python-headless shapely geopandas pyyaml requests sqlalchemy boto3 rtree sklearn matplotlib
 
 # Versions from Dask environment
-RUN pip install --upgrade cloudpickle==1.2.2 blosc==1.7.0 dask==2.10.0 distributed==2.10.0 msgpack==0.6.1 tornado==6.0.3 fsspec>=0.3.3 scikit-learn==0.22.1
+RUN pip install --upgrade dask_ml dask[dataframe]==2.12.0 distributed==2.12.0 lz4==3.0.2 blosc==1.8.3 cloudpickle==1.3.0 msgpack==1.0.0 numpy==1.18.1 toolz==0.10.0 tornado==6.0.4 imbalanced-learn
+
+# pip install --upgrade pyproj pandas shapely geopandas dask_ml joblib scikit-learn==0.22.2.post1 dask[dataframe]==2.12.0 distributed==2.12.0 lz4==3.0.2 blosc==1.8.3 cloudpickle==1.3.0 msgpack==1.0.0 numpy==1.18.1 toolz==0.10.0 tornado==6.0.4 
 
 COPY . .
 

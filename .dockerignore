@@ -1,0 +1,17 @@
+cnf/aws-secret.yml
+cnf/sasse_aws.yaml
+cnf/smartmet.yaml
+cnf/database.yaml
+tracker
+models
+results
+notebooks
+dask-worker-space
+.git
+.pynb-checkpoints
+.DS_Store
+.gitignore
+README.md
+docker-compose.yml
+run_in_openshift.sh
+run_in_rahti.sh

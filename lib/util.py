@@ -3,8 +3,9 @@ import os, math, pyproj, yaml, logging, joblib, dask
 from shapely.ops import transform
 from functools import partial
 import pandas as pd
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, mean_squared_error, mean_absolute_error, r2_score, classification_report
+from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, mean_squared_error, mean_absolute_error, r2_score, classification_report, make_scorer
+from scipy.stats import expon
 
 def evaluate(model, options, data=None, dataset_file=None, fh=None, viz=None):
     """
@@ -17,8 +18,8 @@ def evaluate(model, options, data=None, dataset_file=None, fh=None, viz=None):
         data = pd.read_csv(options.dataset_file)
         data = data.loc[data['weather_parameter'] == 'WindGust']
 
-        X = data_train.loc[:, options.feature_params]
-        y = data_train.loc[:, options.label].values.ravel()
+        X = data.loc[:, options.feature_params]
+        y = data.loc[:, options.label].values.ravel()
 
     y_pred = model.predict(X)
     y_pred_proba = model.predict_proba(X)
@@ -63,13 +64,22 @@ def evaluate(model, options, data=None, dataset_file=None, fh=None, viz=None):
 
     logging.info('Validation report:\n{}'.format(classification_report(y_pred, y)))
 
-def rfc_param_grid():
-    param_grid = {"n_estimators": [10, 100, 200, 800],
-                  "max_depth": [3, 20, None],
-                  "max_features": ["auto", "sqrt", "log2", None],
-                  "min_samples_split": [2,5,10],
-                  "min_samples_leaf": [1, 2, 4, 10],
-                  "bootstrap": [True, False]}
+def param_grid(model):
+    """ Get params for KFold CV """
+    if model == 'rfc':
+        param_grid = {"n_estimators": [10, 100, 200, 800],
+                      "max_depth": [3, 20, None],
+                      "max_features": ["auto", "sqrt", "log2", None],
+                      "min_samples_split": [2,5,10],
+                      "min_samples_leaf": [1, 2, 4, 10],
+                      "bootstrap": [True, False]}
+    elif model == 'svc':
+        param_grid = {"C": expon(scale=100),
+                      "kernel": ['rbf', 'linear', 'sigmoid', 'poly'],
+                      'degree': range(1,5)}
+    else:
+        raise "Not implemented"
+
     return param_grid
 
 def cv(X, y, model, options, fh):
@@ -90,29 +100,52 @@ def cv(X, y, model, options, fh):
     return : model
     """
 
-    if options.model == 'rfc':
-        param_grid = rfc_param_grid()
-    else:
-        raise Exception("Not implemented")
+
+    scoring = {'accuracy': make_scorer(accuracy_score),
+               'precision': make_scorer(precision_score, average = 'macro'),
+               'recall': make_scorer(recall_score, average = 'macro'),
+               'f1_macro': make_scorer(f1_score, average = 'macro'),
+               'f1_weighted': make_scorer(f1_score, average = 'weighted')}
+
 
     random_search = RandomizedSearchCV(model,
-                                       param_distributions=param_grid,
+                                       param_distributions=param_grid(options.model),
                                        n_iter=int(options.n_iter_search),
-                                       scoring=['f1_macro', 'f1_micro', 'accuracy', 'precision', 'recall'],
+                                       scoring=scoring,
+                                       cv=TimeSeriesSplit(),
                                        return_train_score=True,
-                                       refit='f1_macro',
+                                       refit=False, # it's probably faster to retrain separately than keep probability True
                                        n_jobs=-1)
 
     logging.info('Starting 5-fold random search cross validation with {} iterations... X size is {}.'.format(options.n_iter_search, len(X)))
-    with joblib.parallel_backend('dask'):
-        random_search.fit(X, y)
+
+    #with joblib.parallel_backend('dask'):
+    random_search.fit(X, y)
 
     logging.info("RandomizedSearchCV done.")
 
-    fname = options.output_path+'/random_search_cv_results.txt'
-    fh.report_cv_results(random_search.cv_results_, filename=fname)
+    t = scoring.keys()
+    scores = []
+    for s in t:
+        scores.append('mean_test_{}'.format(s))
 
-    return random_search.best_estimator_
+    cv_results = pd.DataFrame(random_search.cv_results_)
+    cv_results.sort_values(by=['mean_test_f1_macro'], inplace=True, ascending=False, ignore_index=True)
+    fname = options.output_path+'/random_search_cv_results.txt'
+    fh.df_to_csv(cv_results, fname)
+    logging.info("\n{}".format(cv_results.loc[:, scores]))
+
+    # Fit with best params
+    best_params = cv_results.loc[0,'params']
+    if options.model in ['svc']:
+        best_params['probability'] = True
+    model.set_params(**best_params)
+
+    #with joblib.parallel_backend('dask'):
+    model.fit(X, y)
+
+    #return random_search.best_estimator_
+    return model
 
 def feature_selection(X, y, model, options, fh):
     """
@@ -125,35 +158,34 @@ def feature_selection(X, y, model, options, fh):
     logging.info('Starting feature selection process...')
 
     logging.info('..traingin {} with {} samples'.format(options.model, len(X)))
-    with joblib.parallel_backend('dask'):
-        model.fit(X, y)
+    #with joblib.parallel_backend('dask'):
+    model.fit(X, y)
 
     # Sort feature importances in descending order and rearrange feature names accordingly
     indices = np.argsort(model.feature_importances_)[::1]
     names = [options.feature_params[i] for i in indices]
 
     cv_results = None
-    param_grid = rfc_param_grid()
     logging.info('..performing cv search...')
     #for i in range(0,len(names)-4):
     for i in range(0,5):
         logging.info('...with {} parameters'.format(len(names)-i))
         data = X.loc[:,names[i:]]
         random_search = RandomizedSearchCV(model,
-                                           param_distributions=param_grid,
+                                           param_distributions=param_grid(options.model),
                                            n_iter=int(options.n_iter_search),
                                            scoring=['f1_macro', 'f1_micro', 'accuracy'],
                                            return_train_score=True,
                                            refit=False,
                                            n_jobs=-1)
 
-        try:
-            with joblib.parallel_backend('dask'):
-                random_search.fit(data, y)
-        except AttributeError:
-            logging.warning('AttributeError while fitting. Trying again.')
-            with joblib.parallel_backend('dask'):
-                random_search.fit(data, y)
+        #try:
+        #    with joblib.parallel_backend('dask'):
+        random_search.fit(data, y)
+#        except AttributeError:
+#            logging.warning('AttributeError while fitting. Trying again.')
+#            with joblib.parallel_backend('dask'):
+#                random_search.fit(data, y)
 
         if cv_results is None:
             cv_results = pd.DataFrame(random_search.cv_results_) #.head(1)
@@ -180,8 +212,8 @@ def feature_selection(X, y, model, options, fh):
     params = names[cv_results.loc[0, 'Number of parameters']:]
     data = X.loc[:, params]
 
-    with joblib.parallel_backend('dask'):
-        model.fit(data, y)
+    #with joblib.parallel_backend('dask'):
+    model.fit(data, y)
 
     return model, params
 
