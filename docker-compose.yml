@@ -28,7 +28,20 @@ services:
 
 
     #command: python -u tracker/storm_tracker.py --starttime 2010-07-23T06:00:00 --endtime 2010-08-10T01:00:00
-    #
+
+  create_dataset:
+    volumes:
+      - .:/usr/src/app:Z
+    environment:
+      AWS_ACCESS_KEY_ID: ***REMOVED***
+      AWS_SECRET_ACCESS_KEY: ***REMOVED***
+      CURL_CA_BUNDLE: /etc/pki/tls/certs/ca-bundle.crt
+    build:
+      context: ./create_dataset
+      dockerfile: Dockerfile
+    container_name: create_dataset
+    image: sasse:create_dataset
+    command: python -u create_dataset/create_dataset.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test}
 
 
   cl:
