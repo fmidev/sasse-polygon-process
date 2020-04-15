@@ -41,8 +41,21 @@ services:
       dockerfile: Dockerfile
     container_name: create_dataset
     image: sasse:create_dataset
-    command: python -u create_dataset/create_dataset.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test} --db_config_filename ${db_config_filename:-cnf/sasse_aws.yaml}
+    command: python -u create_dataset/create_dataset.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test} --db_config_filename ${db_config_filename:-cnf/sasse_aws.yaml} --dataset ${dataset:-energiateollisuus} --dataset_table ${dataset_table:-classification_dataset_energiateollisuus}
 
+  test:
+    volumes:
+      - .:/usr/src/app:Z
+    environment:
+      AWS_ACCESS_KEY_ID: ***REMOVED***
+      AWS_SECRET_ACCESS_KEY: ***REMOVED***
+      CURL_CA_BUNDLE: /etc/pki/tls/certs/ca-bundle.crt
+    build:
+      context: ./create_dataset
+      dockerfile: Dockerfile
+    container_name: create_dataset
+    image: sasse:create_dataset
+    command: python create_dataset/test.py
 
   cl:
     volumes:

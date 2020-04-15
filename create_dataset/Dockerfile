@@ -16,6 +16,8 @@ RUN apt-get install ca-certificates
 RUN mkdir -p /etc/pki/tls/certs
 RUN cp /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
 
+RUN pip install tqdm
+
 COPY . .
 
 EXPOSE 5432
