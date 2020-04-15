@@ -2,8 +2,11 @@
 import sys, argparse, logging, joblib
 sys.path.insert(0, 'lib/')
 import datetime, time, boto3, yaml, os
+from pathlib import Path
 
 from datetime import timedelta
+
+from configparser import ConfigParser
 
 import pandas as pd
 import numpy as np
@@ -23,74 +26,40 @@ from shapely.geometry import Polygon, MultiPolygon
 
 import psycopg2
 from sqlalchemy import create_engine
+import pandas.io.sql as sqlio
 
 from dask.distributed import Client, progress
 import dask.dataframe as dd
 import dask
 from dask import delayed
+import dask.array as dask_array
 
 from config import read_options
 
-def save_dataset(df, table_name='classification_dataset'):
-    """
-    Save classification dataset into the db
+def db_config(config_filename, section=''):
+    parser = ConfigParser()
 
-    df : DataFrame
-         DataFrame data
-    """
-    if df is None or len(df) < 1:
-        return
-    logging.info('Storing classification set to db sasse.{}...'.format(table_name))
+    my_file = Path(config_filename)
+    if not my_file.is_file():
+        raise Exception("{} don't exist".format(config_filename))
 
-    # db_name, db_user, db_host, db_pass
-    engine = create_engine('postgresql://{user}:{passwd}@{host}:5432/{db}'.format(user=db_user,
-                                                                                 passwd=db_pass,
-                                                                                 host=db_host,
-                                                                                 db=db_name))
+    parser.read(config_filename)
+    db = {}
+    if parser.has_section(section):
+        params = parser.items(section)
+        for param in params:
+            db[param[0]] = param[1]
+    else:
+        raise Exception('Section {0} not found in the {1} file'.format(section, config_filename))
 
-    index_name = 'id'
-    df.to_sql(table_name, engine, schema='sasse', if_exists='append', index=False)
+    return db
 
-def load_dataset(table_name='classification_dataset'):
-    """
-    Load classification dataset from db
-
-    table_name : str
-                 table name to be used
-    """
-    all_params_w_labels = all_params + ['class', 'class_customers']
-    conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s'" % (db_name, db_user, db_host, db_pass))
-    sql = """SELECT "{}" FROM sasse.{}""".format('","'.join(all_params_w_labels), table_name)
-
-    cursor = conn.cursor()
-    cursor.execute(sql)
-    results = cursor.fetchall()
-    df = pd.DataFrame(results, columns=all_params_w_labels)
-    df.set_index('point_in_time', inplace=True)
-    return df
-
-# At the end, these were never used
-def download_file(bucket, key, local_file):
-    s3 = boto3.client('s3', aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'], aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'])
-    s3.download_file(bucket, key, local_file)
-
-def get_keys(bucket, path, ending='tif', prefix=None):
-    s3 = boto3.client('s3', aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'], aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'])
-    result = s3.list_objects(Bucket=bucket, Prefix=path)
-    keys = []
-
-    if prefix is None:
-        prefix='s3://{}/'.format(bucket)
-
-    for key in result['Contents']:
-        if key['Key'][-len(ending):] == ending:
-            keys.append('{}{}'.format(prefix, key['Key']))
-    return keys
-
-def get_dataset(start, end, meta_params, geom_params, storm_params, outage_params, transformer_params, all_params, paraller=True):
+def create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformer_params, all_params):
     """ Gather dataset from db """
     #print('Reading data for {}-{}...'.format(start, end))
-    conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s'" % (db_name, db_user, db_host, db_pass))
+
+    conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s'" % (db_params['database'], db_params['user'], db_params['host'], db_params['password']))
+
     sql = """
         SELECT
         """
@@ -155,18 +124,54 @@ def get_dataset(start, end, meta_params, geom_params, storm_params, outage_param
     cursor.execute(sql)
     results = cursor.fetchall()
 
-    print('.', end='')
-
     df = pd.DataFrame(results, columns=all_params+transformer_params)
+
+    df = sqlio.read_sql_query(sql, conn)
+    df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(wkt.loads)
+
+    #df = gpd.GeoDataFrame(df, geometry='geom')
 
     return df
 
+def save_dataset(df, db_params, table_name='classification_dataset'):
+    """
+    Save classification dataset into the db
 
+    df : DataFrame
+         DataFrame data
+    """
+    if df is None or len(df) < 1:
+        return
+
+    logging.info('Storing classification set to db sasse.{}...'.format(table_name))
+
+    host='docker.for.mac.localhost'
+
+    # db_name, db_user, db_host, db_pass
+    engine = create_engine('postgresql://{user}:{passwd}@{host}:5432/{db}'.format(user=db_params['user'],
+                                                                                  passwd=db_params['password'],
+                                                                                  host=host,
+                                                                                  db=db_params['database']))
+
+    df.to_sql(table_name, engine, schema='sasse', if_exists='append', index=False)
+
+def get_version():
+    return rasterio.__version__
 
 def main():
 
-    client = Client('{}:8786'.format(options.dask))
+    if hasattr(options, 'dask'):
+        client = Client('{}:8786'.format(options.dask))
+    else:
+        client = Client()
+
+    #print(client.run(get_version))
+    #sys.exit()
+
     client.get_versions(check=True)
+    logging.info(client)
+
+    db_params = db_config(options.db_config_filename, options.db_config_name)
 
     s3 = boto3.resource('s3')
 
@@ -195,10 +200,9 @@ def main():
     storm_params = polygon_params + met_params
     all_params = meta_params + geom_params + storm_params + outage_params
 
-
     # Read data from database
     starttime = datetime.datetime.strptime('2010-01-01', "%Y-%m-%d")
-    endtime = datetime.datetime.strptime('2010-01-03', "%Y-%m-%d")
+    endtime = datetime.datetime.strptime('2019-01-01', "%Y-%m-%d")
 
     logging.info('Reading data for {}-{}'.format(starttime, endtime))
 
@@ -208,7 +212,7 @@ def main():
 
         end = start + timedelta(days=1)
 
-        dfs.append(delayed(get_dataset)(start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
+        dfs.append(delayed(create_dataset_loiste_jse)(db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
 
         start = end
 
@@ -217,49 +221,74 @@ def main():
 
     dataset = pd.concat(df)
 
-    dataset.sort_values(by=['point_in_time'], inplace=True)
-    logging.info('\nDone. Found {} records'.format(dataset.shape[0]))
+    #g = dataset['geom'].apply(wkt.loads)
+    g_dataset = gpd.GeoDataFrame(dataset, geometry=dataset['geom'])
+    #g_dataset = gpd.GeoDataFrame(df, geometry='geom')
+
+    #g_dataset.sort_values(by=['point_in_time'], inplace=True)
+    logging.info('\nDone. Found {} records'.format(g_dataset.shape[0]))
 
     # Drop storm objects without customers or transformers, they are outside the range
-    dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].fillna(0)
-    dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].astype(int)
-    dataset.dropna(axis=0, subset=['all_customers', 'transformers'], inplace=True)
+    g_dataset.loc[:,['outages','customers']] = g_dataset.loc[:,['outages','customers']].fillna(0)
+    g_dataset.loc[:,['outages','customers']] = g_dataset.loc[:,['outages','customers']].astype(int)
+    g_dataset.dropna(axis=0, subset=['all_customers', 'transformers'], inplace=True)
 
     # Drop rows with missing meteorological params
     for p in met_params:
-        dataset = dataset[dataset[p] != -999]
+        g_dataset = g_dataset[g_dataset[p] != -999]
 
-    dataset.sort_values(by=['outages'], inplace=True)
+    g_dataset.sort_values(by=['outages'], inplace=True)
 
     # Get forest information
-    g = dataset['geom'].apply(wkt.loads)
-    g_dataset = gpd.GeoDataFrame(dataset, geometry=g)
 
-    paths = [('Forest FRA', 's3://fmi-asi-data-puusto/luke/2017/fra_luokka/puusto_fra_luokka_suomi_4326.tif'),
-         ('Forest age', 's3://fmi-asi-data-puusto/luke/2017/ika/puusto_ika_suomi_4326.tif'),
-         ('Forest site fertility', 's3://fmi-asi-data-puusto/luke/2017/kasvupaikka/puusto_kasvupaikka_suomi_4326.tif'),
-         ('Forest stand mean diameter', 's3://fmi-asi-data-puusto/luke/2017/keskilapimitta/puusto_keskilapimitta_suomi_4326.tif'),
-         ('Forest stand mean height', 's3://fmi-asi-data-puusto/luke/2017/keskipituus/puusto_keskipituus_suomi_4326.tif'),
-         ('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif'),
-         ('Forest site main class', 's3://fmi-asi-data-puusto/luke/2017/paatyyppi/puusto_paatyyppi_suomi_4326.tif')
+    paths = [
+        #('Forest FRA', 's3://fmi-asi-data-puusto/luke/2017/fra_luokka/puusto_fra_luokka_suomi_4326.tif'),
+        ('Forest age', 's3://fmi-asi-data-puusto/luke/2017/ika/puusto_ika_suomi_4326.tif'),
+        ('Forest site fertility', 's3://fmi-asi-data-puusto/luke/2017/kasvupaikka/puusto_kasvupaikka_suomi_4326.tif'),
+        ('Forest stand mean diameter', 's3://fmi-asi-data-puusto/luke/2017/keskilapimitta/puusto_keskilapimitta_suomi_4326.tif'),
+        ('Forest stand mean height', 's3://fmi-asi-data-puusto/luke/2017/keskipituus/puusto_keskipituus_suomi_4326.tif'),
+        ('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif'),
+        ('Forest site main class', 's3://fmi-asi-data-puusto/luke/2017/paatyyppi/puusto_paatyyppi_suomi_4326.tif')
         ]
-    paths = [('Forest FRA', 's3://fmi-asi-data-puusto/luke/2017/fra_luokka/puusto_fra_luokka_suomi_4326.tif')]
+    #paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
     chunks = {'y': 5000, 'x': 5000}
 
-    ars = []
-    for name, path in paths:
-        ars.append((name, xr.open_rasterio(path, chunks=chunks)))
+    def stats(row, data=None, filename=None):
 
-    def stats(row, data):
-        bounds = wkt.loads(row.geom).bounds
-        var_mean = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).mean()
-        var_max = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).max()
-        var_std = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).std()
+        # def dask_percentile(arr, axis=0, q=95):
+        #     if len(arr.chunks[axis]) > 1:
+        #         raise ValueError('Input array cannot be chunked along the percentile dimension.')
+        #     return dask_array.map_blocks(np.percentile, arr, axis=axis, q=q, drop_axis=axis)
+        #
+        # def percentile(arr, axis=0, q=95):
+        #     if isinstance(arr, dask_array.Array):
+        #         return dask_percentile(arr, axis=axis, q=q)
+        #     else:
+        #         return np.percentile(arr, axis=axis, q=q)
+
+        bounds = row.geom.bounds
+        print(".", end="")
+
+        data = xr.open_rasterio(filename, chunks=chunks)
+        data_bbox = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1]))
+        data_bbox = data_bbox.where(data_bbox < 32766)
+
+        var_mean = data_bbox.mean()
+        var_max = data_bbox.max()
+        var_std = data_bbox.std()
+
+        #var_median = data.quantile(.5, dim='band')
+        #var_median = data.reduce(percentile, dim='band', q=50, allow_lazy=True)
+        #var_9q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.9)
+        #var_1q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.1)
+
+        #return var_mean.values, var_median.values, var_max.values, var_std.values, 0, 0 #, var_9q.values, var_1q.values
         return var_mean.values, var_max.values, var_std.values
 
     logging.info('Reading forest information...')
-    for name, ar in ars:
-        g_dataset['mean {}'.format(name)], g_dataset['max {}'.format(name)], g_dataset['std {}'.format(name)] = zip(*g_dataset.apply(lambda x: stats(x, ar), axis=1))
+    for name, filename in paths:
+        #g_dataset['mean {}'.format(name)], g_dataset['median {}'.format(name)], g_dataset['max {}'.format(name)], g_dataset['std {}'.format(name)], g_dataset['9th decile {}'.format(name)], g_dataset['1st decile {}'.format(name)] = zip(*g_dataset.apply(lambda x: stats(x, ar), axis=1))
+        g_dataset['mean {}'.format(name)], g_dataset['max {}'.format(name)], g_dataset['std {}'.format(name)] = zip(*g_dataset.apply(lambda x: stats(x, filename=filename), axis=1))
     logging.info('done')
 
     logging.info(g_dataset.columns.values)
@@ -268,11 +297,11 @@ def main():
 
     # Convert back to original pandas DataFrame
     dataset = pd.DataFrame(g_dataset.drop(columns=['geom', 'geometry']))
-    print('Dataset:')
-    print(dataset.head(1))
-    print(dataset.columns)
-    print(dataset.dtypes)
-    print(dataset.shape)
+    logging.debug('Dataset:')
+    logging.debug(dataset.head(1))
+    logging.debug(dataset.columns)
+    logging.debug(dataset.dtypes)
+    logging.debug(dataset.shape)
 
     # Cast classes
 
@@ -294,9 +323,7 @@ def main():
     logging.info("dataset:\n{}".format(dataset.head(1)))
 
     # Save
-    save_dataset(dataset, table_name='classification_dataset_jse_forest')
-
-
+    save_dataset(dataset, db_params, table_name='classification_dataset_jse_forest')
 
 
 
@@ -306,6 +333,8 @@ if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_filename', type=str, default='cnf/rfc.ini', help='Config filename for training config')
     parser.add_argument('--config_name', type=str, default='test', help='Config section for training config')
+    parser.add_argument('--db_config_filename', type=str, default='cnf/sasse_aws.yaml', help='CNF file containing DB connection pararemters')
+    #parser.add_argument('--db_config_name', type=str, default='production', help='Section name in db cnf file to read connection parameters')
 
     if len(sys.argv) <= 1:
         parser.print_help()
@@ -319,11 +348,6 @@ if __name__ =='__main__':
 
     logging.info('Using config {} from {}'.format(options.config_name, options.config_filename))
 
-    db_host = '***REMOVED***'    
-    db_port = 5432
-    db_name = "postgres"
-    db_user = "***REMOVED***"
-    db_pass = "***REMOVED***"
     conf_bucket  ='fmi-sasse-cloudformation'
     conf_file    = 'smartmet.yaml'
     loiste_bbox  = '25,62.7,31.4,66.4'

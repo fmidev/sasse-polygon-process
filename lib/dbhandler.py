@@ -10,6 +10,7 @@ from collections import defaultdict
 from configparser import ConfigParser
 import pandas.io.sql as sqlio
 import geopandas as gpd
+import pandas as pd
 from shapely import wkt
 
 class DBHandler(object):
@@ -19,10 +20,11 @@ class DBHandler(object):
     """
     return_df = True
 
-    def __init__(self, config_filename, config_name):
+    def __init__(self, config_filename, config_name, connect=True):
         self.config_filename = config_filename
         self.config_name = config_name
-        self._connect()
+        if connect:
+            self._connect()
 
     def _connect(self):
         """ Create connection if needed """
@@ -145,7 +147,7 @@ class DBHandler(object):
             with conn.cursor() as curs:
                 curs.execute(statement)
 
-    def _query(self, sql):
+    def _query(self, sql, return_df=None):
         """
         Execute query and return results
 
@@ -153,9 +155,14 @@ class DBHandler(object):
 
         return list of sets
         """
+        if return_df is not None:
+            return_df=return_df
+        else:
+            return_df=self.return_df
+
         self._connect()
         with self.conn as conn:
-            if self.return_df:
+            if return_df:
                 return self._df_to_geodf(sqlio.read_sql_query(sql, conn))
             else:
                 with conn.cursor() as curs:
@@ -239,3 +246,4 @@ class DBHandler(object):
         sql = """SELECT "{}" FROM sasse.classification_dataset""".format('","'.join(params))
 
         return self._query(sql)
+    
