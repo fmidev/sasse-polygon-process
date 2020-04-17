@@ -325,7 +325,7 @@ def main():
         ('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif'),
         ('Forest site main class', 's3://fmi-asi-data-puusto/luke/2017/paatyyppi/puusto_paatyyppi_suomi_4326.tif')
         ]
-    paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
+    #paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
     chunks = {'y': 5000, 'x': 5000}
 
     def stats(row, data=None, filename=None):
@@ -373,17 +373,30 @@ def main():
 
     iterations = len(g_dataset) * len(paths)
 
+    forest_calc = []
     for name, filename in tqdm(paths):
         #g_dataset['mean {}'.format(name)], g_dataset['median {}'.format(name)], g_dataset['max {}'.format(name)], g_dataset['std {}'.format(name)], g_dataset['9th decile {}'.format(name)], g_dataset['1st decile {}'.format(name)] = zip(*g_dataset.apply(lambda x: stats(x, ar), axis=1))
-        g_dataset['mean {}'.format(name)], g_dataset['max {}'.format(name)], g_dataset['std {}'.format(name)] = zip(*g_dataset.apply(lambda x: stats(x, filename=filename), axis=1))
+        #g_dataset['mean {}'.format(name)], g_dataset['max {}'.format(name)], g_dataset['std {}'.format(name)] = zip(*g_dataset.apply(lambda x: stats(x, filename=filename), axis=1))
+        ops = []
+        for index, row in g_dataset.iterrows():
+            ops.append(delayed(stats)(row, filename=filename))
+        forest_calc.append((name, ops))
+
+    for name, ops in tqdm(forest_calc):
+        forest_data = pd.DataFrame(np.array(dask.compute(*ops)).reshape(-1,3), columns=['mean {}'.format(name), 'max {}'.format(name), 'std {}'.format(name)])
+        g_dataset = pd.concat([g_dataset, forest_data], axis=1)
+        #print(forest_data)
+
     logging.info('done')
 
     logging.info(g_dataset.columns.values)
+    logging.info(g_dataset.dtypes)
     logging.info("\n.{}".format(g_dataset.head(2)))
     logging.info('GeoDataFrame shape: {}'.format(g_dataset.shape))
 
     # Convert back to original pandas DataFrame
     dataset = pd.DataFrame(g_dataset.drop(columns=['geom', 'geometry']))
+    #dataset = g_dataset
     logging.debug('Dataset:')
     logging.debug(dataset.head(1))
     logging.debug(dataset.columns)
