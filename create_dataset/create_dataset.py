@@ -325,11 +325,8 @@ def main():
         ('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif'),
         ('Forest site main class', 's3://fmi-asi-data-puusto/luke/2017/paatyyppi/puusto_paatyyppi_suomi_4326.tif')
         ]
-<<<<<<< Updated upstream
-    #paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
-=======
     # paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
->>>>>>> Stashed changes
+
     chunks = {'y': 5000, 'x': 5000}
 
     def stats(row, data=None, filename=None):

@@ -41,11 +41,7 @@ services:
       dockerfile: Dockerfile
     container_name: create_dataset
     image: sasse:create_dataset
-<<<<<<< Updated upstream
-    command: python -u create_dataset/create_dataset.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test} --db_config_filename ${db_config_filename:-cnf/sasse_aws.yaml} --dataset ${dataset:-loiste_jse} --dataset_table ${dataset_table:-classification_dataset_loiste_jse_debug}
-=======
     command: python -u create_dataset/create_dataset.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test} --db_config_filename ${db_config_filename:-cnf/sasse_aws.yaml} --dataset ${dataset:-loiste_jse} --dataset_table ${dataset_table:-classification_dataset_loiste_jse_forest}
->>>>>>> Stashed changes
 
   test:
     volumes:
