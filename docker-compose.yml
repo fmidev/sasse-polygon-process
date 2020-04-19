@@ -41,7 +41,11 @@ services:
       dockerfile: Dockerfile
     container_name: create_dataset
     image: sasse:create_dataset
+<<<<<<< HEAD
     command: python -u create_dataset/create_dataset.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test} --db_config_filename ${db_config_filename:-cnf/sasse_aws.yaml} --dataset ${dataset:-loiste_jse} --dataset_table ${dataset_table:-classification_dataset_loiste_jse_forest}
+=======
+    command: python -u create_dataset/create_dataset.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test} --db_config_filename ${db_config_filename:-cnf/sasse_aws.yaml} --dataset ${dataset:-loiste_jse} --dataset_table ${dataset_table:-classification_dataset_loiste_jse_debug} --starttime ${starttime:-2010-01-02} --endtime ${endtime:-2010-01-03}
+>>>>>>> 0fa58044dff195190f81ea1e4628799673d66471
 
   test:
     volumes:
