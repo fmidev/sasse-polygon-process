@@ -314,13 +314,9 @@ def main():
     all_params = meta_params + geom_params + storm_params + outage_params
 
     # Read data from database
-<<<<<<< HEAD
-    starttime = datetime.datetime.strptime('2010-01-01', "%Y-%m-%d")
-    endtime = datetime.datetime.strptime('2019-01-01', "%Y-%m-%d")
-=======
+
     starttime = datetime.datetime.strptime(options.starttime, "%Y-%m-%d")
     endtime = datetime.datetime.strptime(options.endtime, "%Y-%m-%d")
->>>>>>> 0fa58044dff195190f81ea1e4628799673d66471
 
     logging.info('Reading data for {}-{}'.format(starttime, endtime))
 
@@ -374,14 +370,8 @@ def main():
         ('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif'),
         ('Forest site main class', 's3://fmi-asi-data-puusto/luke/2017/paatyyppi/puusto_paatyyppi_suomi_4326.tif')
         ]
-<<<<<<< HEAD
-    # paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
-
-    chunks = {'y': 5000, 'x': 5000}
-=======
     #paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
     chunks = {'y': 10000, 'x': 10000}
->>>>>>> 0fa58044dff195190f81ea1e4628799673d66471
 
     ars = []
     for name, filename in paths:
