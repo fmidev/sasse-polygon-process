@@ -28,7 +28,7 @@ import psycopg2
 from sqlalchemy import create_engine
 import pandas.io.sql as sqlio
 
-from dask.distributed import Client, progress
+from dask.distributed import Client, progress, wait
 from dask.diagnostics import ProgressBar
 import dask.dataframe as dd
 import dask
@@ -130,11 +130,12 @@ def create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, s
     df = pd.DataFrame(results, columns=all_params+transformer_params)
 
     df = sqlio.read_sql_query(sql, conn)
-    df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(wkt.loads)
+    #df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(wkt.loads)
+    df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(str)
 
-    #df = gpd.GeoDataFrame(df, geometry='geom')
+    #df = gpd.GeoDataFrame(dxf, geometry='geom')
 
-    return df
+    return dd.from_pandas(df, npartitions=1)
 
 def create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformer_params, all_params):
     """ Gather dataset from db """
@@ -226,6 +227,49 @@ def save_dataset(df, db_params, table_name='classification_dataset'):
 def get_version():
     return rasterio.__version__
 
+def stats(row, datasets):
+    """Get forest information"""
+
+    # def dask_percentile(arr, axis=0, q=95):
+    #     if len(arr.chunks[axis]) > 1:
+    #         raise ValueError('Input array cannot be chunked along the percentile dimension.')
+    #     return dask_array.map_blocks(np.percentile, arr, axis=axis, q=q, drop_axis=axis)
+    #
+    # def percentile(arr, axis=0, q=95):
+    #     if isinstance(arr, dask_array.Array):
+    #         return dask_percentile(arr, axis=axis, q=q)
+    #     else:
+    #         return np.percentile(arr, axis=axis, q=q)
+
+    def x_slice(bounds, ar):
+        return slice(max(bounds[0], min(ar.x).values), min(bounds[2], max(ar.x).values))
+    def y_slice(bounds, ar):
+        return slice(max(bounds[3], min(ar.y).values), min(bounds[1], max(ar.y).values))
+
+    #print(row.geom)
+    bounds = wkt.loads(row.geom).bounds
+    #print(".", end="")
+
+    for name, data in datasets:
+        #data = xr.open_rasterio(filename, chunks=chunks)
+
+        #data_bbox = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])
+        data_bbox = data.sel(x=x_slice(bounds, data), y=y_slice(bounds, data))
+        data_bbox = data_bbox.where(data_bbox < 32766)
+
+        #var_median = data.quantile(.5, dim='band')
+        #var_median = data.reduce(percentile, dim='band', q=50, allow_lazy=True)
+        #var_9q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.9)
+        #var_1q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.1)
+
+        #return var_mean.values, var_median.values, var_max.values, var_std.values, 0, 0 #, var_9q.values, var_1q.values
+
+        row['mean {}'.format(name)] = data_bbox.mean().values
+        row['max {}'.format(name)] = data_bbox.max().values
+        row['std {}'.format(name)] = data_bbox.std().values
+
+    return row
+
 def main():
 
     if hasattr(options, 'dask'):
@@ -270,8 +314,8 @@ def main():
     all_params = meta_params + geom_params + storm_params + outage_params
 
     # Read data from database
-    starttime = datetime.datetime.strptime('2010-01-01', "%Y-%m-%d")
-    endtime = datetime.datetime.strptime('2010-01-03', "%Y-%m-%d")
+    starttime = datetime.datetime.strptime(options.starttime, "%Y-%m-%d")
+    endtime = datetime.datetime.strptime(options.endtime, "%Y-%m-%d")
 
     logging.info('Reading data for {}-{}'.format(starttime, endtime))
 
@@ -282,39 +326,39 @@ def main():
         end = start + timedelta(days=1)
 
         if options.dataset == 'loiste_jse':
-            dfs.append(delayed(create_dataset_loiste_jse)(db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
+            #dfs.append(delayed(create_dataset_loiste_jse)(db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
+            dfs.append(client.submit(create_dataset_loiste_jse, db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
         else:
             dfs.append(delayed(create_dataset_energiateollisuus)(db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
 
         start = end
 
+    for i, d in enumerate(dfs):
+        #dfs[i] = d.apply(lambda row: delayed(stats)(row), axis=1)
+        #print(d)
+        #dfs[i] = d.apply(lambda row: stats(row), axis=1)
+        #print(d)
+        dfs[i] = client.gather(d)
+        #print(df)
+        #dfs[i] = client.map(stats, df)
+        #dfs[i] = dfs[i].apply(lambda row: delayed(stats)(row), axis=1)
+
+    #df = dask.compute(*dfs)
+
+    #print(dfs)
+    #print(df)
+    #df = client.gather(dfs)
+
     with ProgressBar():
         df = dask.compute(*dfs)
 
     dataset = pd.concat(df)
+    #progress(dataset)
+    logging.info('Reading data from DB done. Found {} records'.format(len(dataset)))
 
-    #g = dataset['geom'].apply(wkt.loads)
-    g_dataset = gpd.GeoDataFrame(dataset, geometry=dataset['geom'])
-    #g_dataset = gpd.GeoDataFrame(df, geometry='geom')
-
-    #g_dataset.sort_values(by=['point_in_time'], inplace=True)
-    logging.info('\nDone. Found {} records'.format(g_dataset.shape[0]))
-
-    #
-    g_dataset.loc[:,['outages','customers']] = g_dataset.loc[:,['outages','customers']].fillna(0)
-    g_dataset.loc[:,['outages','customers']] = g_dataset.loc[:,['outages','customers']].astype(int)
-
-    # Drop storm objects without customers or transformers, they are outside the range
-    if options.dataset == 'loiste_jse':
-        g_dataset.dropna(axis=0, subset=['all_customers', 'transformers'], inplace=True)
-
-    # Drop rows with missing meteorological params
-    for p in met_params:
-        g_dataset = g_dataset[g_dataset[p] != -999]
-
-    g_dataset.sort_values(by=['outages'], inplace=True)
-
-    # Get forest information
+    df = dd.from_pandas(dataset, chunksize=100).compute()
+    #print(df)
+    #print(df.loc[:, 'geom'])
 
     paths = [
         #('Forest FRA', 's3://fmi-asi-data-puusto/luke/2017/fra_luokka/puusto_fra_luokka_suomi_4326.tif'),
@@ -326,80 +370,41 @@ def main():
         ('Forest site main class', 's3://fmi-asi-data-puusto/luke/2017/paatyyppi/puusto_paatyyppi_suomi_4326.tif')
         ]
     #paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
-    chunks = {'y': 5000, 'x': 5000}
+    chunks = {'y': 10000, 'x': 10000}
 
-    def stats(row, data=None, filename=None):
+    ars = []
+    for name, filename in paths:
+        ars.append((name, xr.open_rasterio(filename, chunks=chunks)))
 
-        # def dask_percentile(arr, axis=0, q=95):
-        #     if len(arr.chunks[axis]) > 1:
-        #         raise ValueError('Input array cannot be chunked along the percentile dimension.')
-        #     return dask_array.map_blocks(np.percentile, arr, axis=axis, q=q, drop_axis=axis)
-        #
-        # def percentile(arr, axis=0, q=95):
-        #     if isinstance(arr, dask_array.Array):
-        #         return dask_percentile(arr, axis=axis, q=q)
-        #     else:
-        #         return np.percentile(arr, axis=axis, q=q)
+    client.scatter(ars)
+    client.scatter(df)
 
-        def x_slice(bounds, ar):
-            return slice(max(bounds[0], min(ar.x).values), min(bounds[2], max(ar.x).values))
-        def y_slice(bounds, ar):
-            return slice(max(bounds[3], min(ar.y).values), min(bounds[1], max(ar.y).values))
+    with ProgressBar():
+        dataset = df.apply(lambda row: stats(row, ars), axis=1)
+        progress(dataset)
 
-        bounds = row.geom.bounds
-        print(".", end="")
+    print('dataset:')
+    print(dataset)
 
-        data = xr.open_rasterio(filename, chunks=chunks)
+    #g_dataset = gpd.GeoDataFrame(dataset, geometry=dataset['geom'])
 
-        #data_bbox = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])
-        data_bbox = data.sel(x=x_slice(bounds, data), y=y_slice(bounds, data))
-        data_bbox = data_bbox.where(data_bbox < 32766)
+    logging.info('\nDone. Found {} records'.format(dataset.shape[0]))
 
-        var_mean = data_bbox.mean()
-        var_max = data_bbox.max()
-        var_std = data_bbox.std()
+    dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].fillna(0)
+    dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].astype(int)
 
-        #var_median = data.quantile(.5, dim='band')
-        #var_median = data.reduce(percentile, dim='band', q=50, allow_lazy=True)
-        #var_9q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.9)
-        #var_1q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.1)
+    # Drop storm objects without customers or transformers, they are outside the range
+    if options.dataset == 'loiste_jse':
+        dataset.dropna(axis=0, subset=['all_customers', 'transformers'], inplace=True)
 
-        #return var_mean.values, var_median.values, var_max.values, var_std.values, 0, 0 #, var_9q.values, var_1q.values
-        return var_mean.values, var_max.values, var_std.values
+    # Drop rows with missing meteorological params
+    for p in met_params:
+        dataset = dataset[dataset[p] != -999]
 
-    logging.info('Reading forest information...')
-    pbar = ProgressBar()
-    pbar.register()
+    dataset.sort_values(by=['outages'], inplace=True)
 
-    iterations = len(g_dataset) * len(paths)
-
-    forest_calc = []
-    for name, filename in tqdm(paths):
-        #g_dataset['mean {}'.format(name)], g_dataset['median {}'.format(name)], g_dataset['max {}'.format(name)], g_dataset['std {}'.format(name)], g_dataset['9th decile {}'.format(name)], g_dataset['1st decile {}'.format(name)] = zip(*g_dataset.apply(lambda x: stats(x, ar), axis=1))
-        #g_dataset['mean {}'.format(name)], g_dataset['max {}'.format(name)], g_dataset['std {}'.format(name)] = zip(*g_dataset.apply(lambda x: stats(x, filename=filename), axis=1))
-        ops = []
-        for index, row in g_dataset.iterrows():
-            ops.append(delayed(stats)(row, filename=filename))
-        forest_calc.append((name, ops))
-
-    for name, ops in tqdm(forest_calc):
-        forest_data = pd.DataFrame(np.array(dask.compute(*ops)).reshape(-1,3), columns=['mean {}'.format(name), 'max {}'.format(name), 'std {}'.format(name)])
-        g_dataset = pd.concat([g_dataset, forest_data], axis=1)
-        #print(forest_data)
-
-    logging.info('done')
-
-    logging.info(g_dataset.columns.values)
-    logging.info(g_dataset.dtypes)
-    logging.info("\n.{}".format(g_dataset.head(2)))
-    logging.info('GeoDataFrame shape: {}'.format(g_dataset.shape))
-
-    # Convert back to original pandas DataFrame
-    dataset = pd.DataFrame(g_dataset.drop(columns=['geom', 'geometry']))
-    #dataset = g_dataset
     logging.debug('Dataset:')
     logging.debug(dataset.head(1))
-    logging.debug(dataset.columns)
     logging.debug(dataset.dtypes)
     logging.debug(dataset.shape)
 
@@ -427,7 +432,6 @@ def main():
 
 
 
-
 if __name__ =='__main__':
 
     parser = argparse.ArgumentParser()
@@ -436,6 +440,8 @@ if __name__ =='__main__':
     parser.add_argument('--db_config_filename', type=str, default='cnf/sasse_aws.yaml', help='CNF file containing DB connection pararemters')
     parser.add_argument('--dataset', type=str, default='loiste_jse', help='Which dataaset to create (loiste_jse|energiateollisuus)')
     parser.add_argument('--dataset_table', type=str, default='classification_dataset_jse_forest', help='DB tablename')
+    parser.add_argument('--starttime', type=str, default='2010-01-01', help='start time')
+    parser.add_argument('--endtime', type=str, default='2019-01-01', help='end time')
 
     if len(sys.argv) <= 1:
         parser.print_help()
@@ -448,6 +454,7 @@ if __name__ =='__main__':
                         level=logging.INFO)
 
     logging.info('Using config {} from {}'.format(options.config_name, options.config_filename))
+    logging.info('DB config: {} | Dask: {} | Dataset: {} | Dataset db table: {} | Starttime: {} | Endtime: {}'.format(options.db_config_name, options.dask, options.dataset, options.dataset_table, options.starttime, options.endtime))
     logging.getLogger('boto3').setLevel(logging.WARNING)
     logging.getLogger('botocore').setLevel(logging.CRITICAL)
     logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
