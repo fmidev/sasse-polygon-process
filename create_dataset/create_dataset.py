@@ -316,6 +316,7 @@ def main():
     all_params = meta_params + geom_params + storm_params + outage_params
 
     # Read data from database
+
     starttime = datetime.datetime.strptime(options.starttime, "%Y-%m-%d")
     endtime = datetime.datetime.strptime(options.endtime, "%Y-%m-%d")
 
