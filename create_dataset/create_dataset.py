@@ -227,7 +227,7 @@ def save_dataset(df, db_params, table_name='classification_dataset'):
 def get_version():
     return rasterio.__version__
 
-def stats(row, datasets):
+def stats(geoms, meta, data):
     """Get forest information"""
 
     # def dask_percentile(arr, axis=0, q=95):
@@ -246,14 +246,9 @@ def stats(row, datasets):
     def y_slice(bounds, ar):
         return slice(max(bounds[3], min(ar.y).values), min(bounds[1], max(ar.y).values))
 
-    #print(row.geom)
-    bounds = wkt.loads(row.geom).bounds
-    #print(".", end="")
-
-    for name, data in datasets:
-        #data = xr.open_rasterio(filename, chunks=chunks)
-
-        #data_bbox = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])
+    rows = []
+    for geom in geoms:
+        bounds = wkt.loads(geom).bounds
         data_bbox = data.sel(x=x_slice(bounds, data), y=y_slice(bounds, data))
         data_bbox = data_bbox.where(data_bbox < 32766)
 
@@ -261,14 +256,21 @@ def stats(row, datasets):
         #var_median = data.reduce(percentile, dim='band', q=50, allow_lazy=True)
         #var_9q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.9)
         #var_1q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.1)
+        rows.append([float(data_bbox.mean().values), float(data_bbox.max().values), float(data_bbox.max().values)])
 
-        #return var_mean.values, var_median.values, var_max.values, var_std.values, 0, 0 #, var_9q.values, var_1q.values
+    return pd.DataFrame(rows, columns=list(meta.keys()), index=geoms.index)
 
-        row['mean {}'.format(name)] = data_bbox.mean().values
-        row['max {}'.format(name)] = data_bbox.max().values
-        row['std {}'.format(name)] = data_bbox.std().values
+def get_file(path):
+    """ Download file to /tmp if doesn't exist"""
 
-    return row
+    local_name = '/tmp/{}'.format(Path(path).name)
+    local_file = Path(local_name)
+    if not local_file.is_file():
+        print('Downloading file {}'.format(path))
+        s3_client = boto3.client('s3')
+        s3_client.download_file('fmi-asi-data-puusto', path, local_name)
+
+    return local_name
 
 def main():
 
@@ -329,36 +331,19 @@ def main():
             #dfs.append(delayed(create_dataset_loiste_jse)(db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
             dfs.append(client.submit(create_dataset_loiste_jse, db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
         else:
-            dfs.append(delayed(create_dataset_energiateollisuus)(db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
+            dfs.append(client.submit(create_dataset_energiateollisuus, db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
 
         start = end
 
     for i, d in enumerate(dfs):
-        #dfs[i] = d.apply(lambda row: delayed(stats)(row), axis=1)
-        #print(d)
-        #dfs[i] = d.apply(lambda row: stats(row), axis=1)
-        #print(d)
         dfs[i] = client.gather(d)
-        #print(df)
-        #dfs[i] = client.map(stats, df)
-        #dfs[i] = dfs[i].apply(lambda row: delayed(stats)(row), axis=1)
-
-    #df = dask.compute(*dfs)
-
-    #print(dfs)
-    #print(df)
-    #df = client.gather(dfs)
 
     with ProgressBar():
         df = dask.compute(*dfs)
 
     dataset = pd.concat(df)
-    #progress(dataset)
-    logging.info('Reading data from DB done. Found {} records'.format(len(dataset)))
 
-    df = dd.from_pandas(dataset, chunksize=100).compute()
-    #print(df)
-    #print(df.loc[:, 'geom'])
+    logging.info('Reading data from DB done. Found {} records'.format(len(dataset)))
 
     paths = [
         #('Forest FRA', 's3://fmi-asi-data-puusto/luke/2017/fra_luokka/puusto_fra_luokka_suomi_4326.tif'),
@@ -369,22 +354,42 @@ def main():
         ('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif'),
         ('Forest site main class', 's3://fmi-asi-data-puusto/luke/2017/paatyyppi/puusto_paatyyppi_suomi_4326.tif')
         ]
+
     #paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
     chunks = {'y': 10000, 'x': 10000}
 
     ars = []
-    for name, filename in paths:
-        ars.append((name, xr.open_rasterio(filename, chunks=chunks)))
+    for name, path in paths:
+        #filename = get_file(path)
+        ars.append((name, xr.open_rasterio(path, chunks=chunks)))
+
+    # Initiate forest data columns
+    operations = ['mean', 'max', 'std']
+    metas = {}
+    for name, path in paths:
+        meta = {}
+        for op in operations:
+            opname = '{} {}'.format(op, name)
+            #dataset[opname] = np.nan
+            meta[opname] = 'float'
+        metas[name] = meta
+
+    df = dd.from_pandas(dataset, chunksize=1000)
 
     client.scatter(ars)
     client.scatter(df)
 
+    ddf_outs = []
     with ProgressBar():
-        dataset = df.apply(lambda row: stats(row, ars), axis=1)
-        progress(dataset)
+        #dataset = df.apply(lambda row: delayed(stats)(row, ars), axis=1)
+        for name, ar in ars:
+            ddf_outs.append(df.geom.map_partitions(stats, metas[name], ar, meta=pd.DataFrame(metas[name], index=dataset.index)))
 
-    print('dataset:')
-    print(dataset)
+        dfs = dask.compute(*ddf_outs)
+        progress(dfs)
+
+    forest_data = pd.concat(dfs, axis=1)
+    dataset = dataset.join(forest_data)
 
     #g_dataset = gpd.GeoDataFrame(dataset, geometry=dataset['geom'])
 
@@ -403,11 +408,6 @@ def main():
 
     dataset.sort_values(by=['outages'], inplace=True)
 
-    logging.debug('Dataset:')
-    logging.debug(dataset.head(1))
-    logging.debug(dataset.dtypes)
-    logging.debug(dataset.shape)
-
     # Cast classes
 
     # outages
@@ -425,7 +425,12 @@ def main():
         i += 1
 
     dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].astype(int)
+
+    dataset.drop(columns=['geom'], inplace=True)
+
     logging.info("dataset:\n{}".format(dataset.head(1)))
+    logging.info("\n{}".format(list(dataset.dtypes)))
+    logging.info("\n{}".format(dataset.shape))
 
     # Save
     save_dataset(dataset, db_params, table_name=options.dataset_table)
@@ -453,8 +458,13 @@ if __name__ =='__main__':
     logging.basicConfig(format=("[%(levelname)s] %(asctime)s %(filename)s:%(funcName)s:%(lineno)s %(message)s"),
                         level=logging.INFO)
 
+    if hasattr(options, 'dask'):
+        dask_info = options.dask
+    else:
+        dask_info = 'local'
+
     logging.info('Using config {} from {}'.format(options.config_name, options.config_filename))
-    logging.info('DB config: {} | Dask: {} | Dataset: {} | Dataset db table: {} | Starttime: {} | Endtime: {}'.format(options.db_config_name, options.dask, options.dataset, options.dataset_table, options.starttime, options.endtime))
+    logging.info('DB config: {} | Dask: {} | Dataset: {} | Dataset db table: {} | Starttime: {} | Endtime: {}'.format(options.db_config_name, dask_info, options.dataset, options.dataset_table, options.starttime, options.endtime))
     logging.getLogger('boto3').setLevel(logging.WARNING)
     logging.getLogger('botocore').setLevel(logging.CRITICAL)
     logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
