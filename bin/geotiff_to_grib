@@ -1,0 +1,41 @@
+#!/bin/bash
+
+export LC_ALL=en_GB.UTF-8
+export LANG=en_GB.UTF-8
+declare -a arr=("ika" "kasvupaikka" "keskilapimitta" "keskipituus" "latvusto" "paatyyppi")
+declare -A params=( ["ika"]="tvla" ["kasvupaikka"]="tvl" ["keskilapimitta"]="plcov_mx" ["keskipituus"]="hsurf" ["latvusto"]="ccf" ["paatyyppi"]="tvh" )
+declare -a arr=("ika")
+
+# sudo mkdir -p /data && sudo chown 775 /data && sudo chcon -Rt svirt_sandbox_file_t /data
+#folder=$1
+for folder in "${arr[@]}"
+do
+    file="s3://fmi-asi-data-puusto/luke/2017/${folder}/${folder}_suomi_4326.tif"
+    BASE="${HOME}/data/puusto"
+    local_file="${BASE}/${folder}_suomi_4326.tif"
+    optimized_file="${BASE}/${folder}_suomi_4326_lowres.tif"
+    grib_file="${BASE}/puusto_20070101_${folder}.grib"
+
+    if [[ ! -f "${local_file}" ]]; then
+        cmd="aws s3 cp ${file} ${local_file}"
+        echo $cmd
+        $cmd
+    fi
+
+    if [[ ! -f "${file_optimized}" ]]; then
+        cmd="docker run --privileged -v ${HOME}:/root -v ${BASE}:${BASE}:rw --rm osgeo/gdal gdal_translate -outsize 10% 10% ${local_file} ${optimized_file}"
+        echo $cmd
+        $cmd
+    fi
+
+    cmd="rio convert -f grib ${optimized_file} ${grib_file}"
+    echo $cmd
+    $cmd
+
+    shortName="${params[${folder}]}"
+    cmd="grib_set -s centre=98,shortName=${shortName},date=20070101 ${grib_file} ${grib_file}"
+    echo $cmd
+    $cmd
+
+    #rm -f $local_file
+done
