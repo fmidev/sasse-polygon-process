@@ -3,8 +3,8 @@
 export LC_ALL=en_GB.UTF-8
 export LANG=en_GB.UTF-8
 declare -a arr=("ika" "kasvupaikka" "keskilapimitta" "keskipituus" "latvusto" "paatyyppi")
-declare -A params=( ["ika"]="tvla" ["kasvupaikka"]="tvl" ["keskilapimitta"]="plcov_mx" ["keskipituus"]="hsurf" ["latvusto"]="ccf" ["paatyyppi"]="tvh" )
-declare -a arr=("ika")
+declare -A params=( ["ika"]="tvldiff" ["kasvupaikka"]="tvl" ["keskilapimitta"]="tvhgrd" ["keskipituus"]="tvha" ["latvusto"]="tvlgrd" ["paatyyppi"]="tvh" )
+# declare -a arr=("ika")
 
 # sudo mkdir -p /data && sudo chown 775 /data && sudo chcon -Rt svirt_sandbox_file_t /data
 #folder=$1
@@ -23,7 +23,7 @@ do
     fi
 
     if [[ ! -f "${file_optimized}" ]]; then
-        cmd="docker run --privileged -v ${HOME}:/root -v ${BASE}:${BASE}:rw --rm osgeo/gdal gdal_translate -outsize 10% 10% ${local_file} ${optimized_file}"
+        cmd="docker run --privileged -v ${HOME}:/root -v ${BASE}:${BASE}:rw --rm osgeo/gdal gdal_translate -outsize 1% 1% ${local_file} ${optimized_file}"
         echo $cmd
         $cmd
     fi
