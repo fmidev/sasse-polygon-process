@@ -214,7 +214,7 @@ def save_dataset(df, db_params, table_name='classification_dataset'):
 
     logging.info('Storing classification set to db sasse.{}...'.format(table_name))
 
-    host='docker.for.mac.localhost'
+    #host='docker.for.mac.localhost'
 
     # db_name, db_user, db_host, db_pass
     engine = create_engine('postgresql://{user}:{passwd}@{host}:5432/{db}'.format(user=db_params['user'],
