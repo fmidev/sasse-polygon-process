@@ -1,8 +1,8 @@
 production:
   host: http://172.17.0.1
 dev:
-  host: http://ec2-52-215-83-153.eu-west-1.compute.amazonaws.com
-  
+  host: http://ec2-34-242-23-86.eu-west-1.compute.amazonaws.com
+
 params:
   T-K:ERA5:26:1:0:1:
     name: Temperature
@@ -90,3 +90,47 @@ params:
       - "@AVG"
       - "@MIN"
       - "@MAX"
+
+forest_params:
+  FORESTAGE:Forest:90001::0:0:
+    name: Forest age
+    aggregation:
+      - "@QUANTILE,0.1"
+      - "@QUANTILE,0.5"
+      - "@QUANTILE,0.9"
+      - "@AVG"
+  FORESTCANOPY:Forest:90001::0:0:
+    name: Forest canopy cover
+    aggregation:
+      - "@QUANTILE,0.1"
+      - "@QUANTILE,0.5"
+      - "@QUANTILE,0.9"
+      - "@AVG"
+  FORESTDIAMETER:Forest:90001::0:0:
+    name: Forest diameter
+    aggregation:
+      - "@QUANTILE,0.1"
+      - "@QUANTILE,0.5"
+      - "@QUANTILE,0.9"
+      - "@AVG"
+  FORESTLOCATION:Forest:90001::0:0:
+    name: Forest location
+    aggregation:
+      - "@QUANTILE,0.1"
+      - "@QUANTILE,0.5"
+      - "@QUANTILE,0.9"
+      - "@AVG"
+  FORESTTYPE:Forest:90001::0:0:
+    name: Forest type
+    aggregation:
+      - "@QUANTILE,0.1"
+      - "@QUANTILE,0.5"
+      - "@QUANTILE,0.9"
+      - "@AVG"
+  FORESTLENGTH:Forest:90001::0:0:
+    name: Forest length
+    aggregation:
+      - "@QUANTILE,0.1"
+      - "@QUANTILE,0.5"
+      - "@QUANTILE,0.9"
+      - "@AVG"
