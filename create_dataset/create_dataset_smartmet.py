@@ -210,7 +210,8 @@ def save_dataset(df, db_params, table_name='classification_dataset'):
 
     logging.info('Storing classification set to db sasse.{}...'.format(table_name))
 
-    host='docker.for.mac.localhost'
+    # host='docker.for.mac.localhost'
+    host = db_params['host']
 
     # db_name, db_user, db_host, db_pass
     engine = create_engine('postgresql://{user}:{passwd}@{host}:5432/{db}'.format(user=db_params['user'],
@@ -268,7 +269,11 @@ def get_forest_data(config, params, wkt):
     if response.status_code == 200:
         data = response.json()[0]
     else:
-        raise SmartMetException({'url': url, 'response_headers': response.headers})
+        logging.error('Error with url: {}. Headers: {}'.format(url, response.headers))
+        values = []
+        for p in params:
+           values.append(np.nan)
+           return values
 
     met_params = {}
     values = []
@@ -402,7 +407,7 @@ def main():
 
         # Dask
         # npartitions derives from number of cores in smartmet server
-        df = dd.from_pandas(dataset, npartitions=2)
+        df = dd.from_pandas(dataset, npartitions=8)
         config, params = _config(options.smartmet_config_filename, options.smartmet_config_name, 'forest_params')
         paramlist = params_to_list(params, True)
         metas = {}
