@@ -214,7 +214,8 @@ def save_dataset(df, db_params, table_name='classification_dataset'):
 
     logging.info('Storing classification set to db sasse.{}...'.format(table_name))
 
-    #host='docker.for.mac.localhost'
+    host = 'docker.for.mac.localhost'
+    host = db_params['host']
 
     # db_name, db_user, db_host, db_pass
     engine = create_engine('postgresql://{user}:{passwd}@{host}:5432/{db}'.format(user=db_params['user'],
@@ -348,12 +349,12 @@ def main():
 
     paths = [
         #('Forest FRA', 's3://fmi-asi-data-puusto/luke/2017/fra_luokka/puusto_fra_luokka_suomi_4326.tif'),
-        ('Forest age', 's3://fmi-asi-data-puusto/luke/2017/ika/puusto_ika_suomi_4326.tif'),
-        ('Forest site fertility', 's3://fmi-asi-data-puusto/luke/2017/kasvupaikka/puusto_kasvupaikka_suomi_4326.tif'),
-        ('Forest stand mean diameter', 's3://fmi-asi-data-puusto/luke/2017/keskilapimitta/puusto_keskilapimitta_suomi_4326.tif'),
-        ('Forest stand mean height', 's3://fmi-asi-data-puusto/luke/2017/keskipituus/puusto_keskipituus_suomi_4326.tif'),
-        ('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif'),
-        ('Forest site main class', 's3://fmi-asi-data-puusto/luke/2017/paatyyppi/puusto_paatyyppi_suomi_4326.tif')
+        ('Forest age', 's3://fmi-asi-data-puusto/luke/2017/ika/ika_suomi_4326_lowres.tif'),
+        ('Forest site fertility', 's3://fmi-asi-data-puusto/luke/2017/kasvupaikka/kasvupaikka_suomi_4326_lowres.tif'),
+        ('Forest stand mean diameter', 's3://fmi-asi-data-puusto/luke/2017/keskilapimitta/keskilapimitta_suomi_4326_lowres.tif'),
+        ('Forest stand mean height', 's3://fmi-asi-data-puusto/luke/2017/keskipituus/keskipituus_suomi_4326_lowres.tif'),
+        ('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/latvusto_suomi_4326_lowres.tif'),
+        ('Forest site main class', 's3://fmi-asi-data-puusto/luke/2017/paatyyppi/paatyyppi_suomi_4326_lowres.tif')
         ]
 
     #paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
