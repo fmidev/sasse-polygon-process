@@ -381,24 +381,26 @@ def main():
     client.scatter(ars)
     client.scatter(df)
 
-    ddf_outs = []
     with ProgressBar():
         #dataset = df.apply(lambda row: delayed(stats)(row, ars), axis=1)
         for name, ar in ars:
-            ddf_outs.append(df.geom.map_partitions(stats, metas[name], ar, meta=pd.DataFrame(metas[name], index=dataset.index)))
+            forest_data_op = df.geom.map_partitions(stats, metas[name], ar, meta=pd.DataFrame(metas[name], index=df.index))
 
-        dfs = dask.compute(*ddf_outs)
-        progress(dfs)
+        forest_data = forest_data_op.compute().reset_index(drop=True)
+        progress(forest_data)
 
-    forest_data = pd.concat(dfs, axis=1)
-    dataset = dataset.join(forest_data)
+    dataset = dataset.reset_index(drop=True).join(forest_data)
 
     #g_dataset = gpd.GeoDataFrame(dataset, geometry=dataset['geom'])
 
     logging.info('\nDone. Found {} records'.format(dataset.shape[0]))
 
+    dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].replace('None', np.nan)
     dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].fillna(0)
+    dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].astype(float)
     dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].astype(int)
+    #print(dataset.loc[:, ['outages', 'customers']])
+    #print('--')
 
     # Drop storm objects without customers or transformers, they are outside the range
     if options.dataset == 'loiste_jse':
@@ -426,16 +428,24 @@ def main():
         dataset.loc[(dataset.loc[:, 'customers'] >= low) & (dataset.loc[:, 'customers'] <= high), 'class_customers'] = i
         i += 1
 
+    #print(dataset.loc[:, ['class', 'class_customers']])
+    dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].fillna(0)
+    dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].astype(float)
     dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].astype(int)
 
     dataset.drop(columns=['geom'], inplace=True)
 
     logging.info("dataset:\n{}".format(dataset.head(1)))
-    logging.info("\n{}".format(list(dataset.dtypes)))
+    logging.info("\n{}".format(dataset.dtypes))
     logging.info("\n{}".format(dataset.shape))
 
     # Save
-    save_dataset(dataset, db_params, table_name=options.dataset_table)
+    try:
+        save_dataset(dataset, db_params, table_name=options.dataset_table)
+    except BrokenPipeError as e:
+        logging.warning(e)
+        save_dataset(dataset, db_params, table_name=options.dataset_table)
+
 
 
 
