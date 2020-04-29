@@ -191,7 +191,8 @@ def create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_pa
     df = pd.DataFrame(results, columns=all_params)
 
     df = sqlio.read_sql_query(sql, conn)
-    df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(wkt.loads)
+    #df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(wkt.loads)
+    df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(str)
 
     #df = gpd.GeoDataFrame(df, geometry='geom')
 
@@ -208,7 +209,7 @@ def save_dataset(df, db_params, table_name='classification_dataset'):
     if df is None or len(df) < 1:
         return
 
-    logging.info('Storing classification set to db sasse.{}...'.format(table_name))
+    print('Storing classification set to db sasse.{}...'.format(table_name))
 
     # host='docker.for.mac.localhost'
     host = db_params['host']
@@ -291,8 +292,8 @@ def get_forest_data(config, params, wkt):
         values.append(float(value))
 
     # Throttle number of requests
-    #return pd.Series(met_params)
-    return values
+    return pd.Series(met_params)
+    #return values
 
 
 def stats(geoms, config, params):
@@ -306,6 +307,78 @@ def stats(geoms, config, params):
 
     return pd.DataFrame(rows, columns=paramlist, index=geoms.index)
 
+def process_time_range(start, end, dataset, db_params, met_params, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params, config, forest_params, dataset_table):
+    """ Process time range """
+
+    paramlist = params_to_list(forest_params)
+
+    print('Reading data for {}-{}'.format(start, end))
+
+    if dataset == 'loiste_jse':
+        dataset = create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
+    else:
+        dataset = create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
+
+    dataset = dataset.compute()
+
+    #print(dataset)
+    print('Reading data from DB done. Found {} records'.format(len(dataset)))
+
+    if len(dataset) < 1 :
+        return
+
+    forest_data = dataset.geom.apply(lambda row: get_forest_data(config, forest_params, wkt.loads(row)))
+    #forest_data = pd.DataFrame(forest_data_rows, columns=paramlist, index=dataset.index)
+
+    dataset = dataset.join(forest_data)
+
+    print('\nDone. Found {} records'.format(dataset.shape[0]))
+
+    dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].fillna(0)
+    dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].astype(int)
+
+    # Drop storm objects without customers or transformers, they are outside the range
+    if options.dataset == 'loiste_jse':
+        dataset.dropna(axis=0, subset=['all_customers', 'transformers'], inplace=True)
+
+    # Drop rows with missing meteorological params
+    for p in met_params:
+        dataset = dataset[dataset[p] != -999]
+
+    dataset.sort_values(by=['outages'], inplace=True)
+
+    # Cast classes
+
+    # outages
+    limits = [(0,0), (1,2), (3,10), (11, 9999999)]
+    i = 0
+    for low, high in limits:
+        dataset.loc[(dataset.loc[:, 'outages'] >= low) & (dataset.loc[:, 'outages'] <= high), 'class'] = i
+        i += 1
+
+    # customers
+    limits = [(0,0), (1,250), (251,500), (501, 9999999)]
+    i = 0
+    for low, high in limits:
+        dataset.loc[(dataset.loc[:, 'customers'] >= low) & (dataset.loc[:, 'customers'] <= high), 'class_customers'] = i
+        i += 1
+
+    dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].astype(int)
+
+    dataset.drop(columns=['geom'], inplace=True)
+
+    print("dataset:\n{}".format(dataset.head(1)))
+    print("\n{}".format(list(dataset.dtypes)))
+    print("\n{}".format(dataset.shape))
+
+    # Save
+    try:
+        save_dataset(dataset, db_params, table_name=dataset_table)
+    except BrokenPipeError as e:
+        logging.warning(e)
+        save_dataset(dataset, db_params, table_name=dataset_table)
+
+    return len(dataset)
 
 def main():
 
@@ -359,112 +432,26 @@ def main():
     starttime = datetime.datetime.strptime(options.starttime, "%Y-%m-%d")
     endtime = datetime.datetime.strptime(options.endtime, "%Y-%m-%d")
 
+    config, forest_params = _config(options.smartmet_config_filename, options.smartmet_config_name, 'forest_params')
+    metas = {}
+    for param in params_to_list(forest_params, True):
+        metas[param] = 'float'
+
+    dfs = []
     start = starttime
     while start <= endtime:
-        batch_start = start
-        batch_end = start + timedelta(days=50) # amount of nodes in dask
+        end = start + timedelta(days=1)
+        #start, end, dataset, db_params, meta_params, geom_params, storm_params, outage_params, transformers_params, all_paramm, config, forest_params, dataset_table
+        dfs.append(client.submit(process_time_range, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), options.dataset, db_params, met_params, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params, config, forest_params, options.dataset_table))
 
-        logging.info('Reading data for {}-{}'.format(batch_start, batch_end))
+        start = end
+        if end > endtime: end = endtime
 
-        dfs, df = [], []
-        day_start = batch_start
-        while day_start <= batch_end:
-
-            day_end = day_start + timedelta(days=1)
-
-            if options.dataset == 'loiste_jse':
-                #dfs.append(delayed(create_dataset_loiste_jse)(db_params, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
-                dfs.append(client.submit(create_dataset_loiste_jse, db_params, day_start.strftime('%Y-%m-%d'), day_end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
-            else:
-                dfs.append(client.submit(create_dataset_energiateollisuus, db_params, day_start.strftime('%Y-%m-%d'), day_end.strftime('%Y-%m-%d'), meta_params, geom_params, storm_params, outage_params, transformers_params, all_params))
-
-            day_start = day_end
-
-        for i, d in enumerate(dfs):
-            dfs[i] = client.gather(d)
-
-        with ProgressBar():
-            try:
-                df = dask.compute(*dfs)
-            except psycopg2.OperationalError as e:
-                logging.warning(e)
-                df = dask.compute(*dfs)
-
-        dataset = pd.concat(df)
-
-        logging.info('Reading data from DB done. Found {} records'.format(len(dataset)))
+    for i, d in enumerate(dfs):
+        count = client.gather(d)
+        logging.info('Processed {} records'.format(count))
 
 
-        # Forest dataset
-        logging.info('Reading forest data...')
-        # For some reason remote dask don't work (some package issue most probably) but in this case local can do
-        client = Client()
-        logging.info(client)
-
-        # Single thread
-        #tqdm.pandas()
-        #forest_data = dataset.geom.progress_apply(lambda row: ssh.get_forest_data(wkt.loads(row))).set_index(dataset.index)
-
-        # Dask
-        # npartitions derives from number of cores in smartmet server
-        df = dd.from_pandas(dataset, npartitions=8)
-        config, params = _config(options.smartmet_config_filename, options.smartmet_config_name, 'forest_params')
-        paramlist = params_to_list(params, True)
-        metas = {}
-        for param in paramlist:
-            metas[param] = 'float'
-
-        ddf_outs = df.geom.map_partitions(stats, config, params, meta=pd.DataFrame(metas, index=dataset.index))
-
-        pbar = ProgressBar()
-        pbar.register()
-        forest_data = ddf_outs.compute()
-
-        dataset = dataset.join(forest_data)
-
-        logging.info('\nDone. Found {} records'.format(dataset.shape[0]))
-
-        dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].fillna(0)
-        dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].astype(int)
-
-        # Drop storm objects without customers or transformers, they are outside the range
-        if options.dataset == 'loiste_jse':
-            dataset.dropna(axis=0, subset=['all_customers', 'transformers'], inplace=True)
-
-        # Drop rows with missing meteorological params
-        for p in met_params:
-            dataset = dataset[dataset[p] != -999]
-
-        dataset.sort_values(by=['outages'], inplace=True)
-
-        # Cast classes
-
-        # outages
-        limits = [(0,0), (1,2), (3,10), (11, 9999999)]
-        i = 0
-        for low, high in limits:
-            dataset.loc[(dataset.loc[:, 'outages'] >= low) & (dataset.loc[:, 'outages'] <= high), 'class'] = i
-            i += 1
-
-        # customers
-        limits = [(0,0), (1,250), (251,500), (501, 9999999)]
-        i = 0
-        for low, high in limits:
-            dataset.loc[(dataset.loc[:, 'customers'] >= low) & (dataset.loc[:, 'customers'] <= high), 'class_customers'] = i
-            i += 1
-
-        dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].astype(int)
-
-        dataset.drop(columns=['geom'], inplace=True)
-
-        logging.info("dataset:\n{}".format(dataset.head(1)))
-        logging.info("\n{}".format(list(dataset.dtypes)))
-        logging.info("\n{}".format(dataset.shape))
-
-        # Save
-        save_dataset(dataset, db_params, table_name=options.dataset_table)
-        start = batch_end
-        if start > endtime: start = endtime
 
 if __name__ =='__main__':
 
