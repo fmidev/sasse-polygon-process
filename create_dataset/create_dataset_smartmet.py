@@ -260,9 +260,11 @@ def get_forest_data(config, params, wkt):
     """ Read forest data for given wkt """
 
     paramlist = params_to_list(params)
+    # 0.05 degree --> ~2.75 km in longitude, ~5.5 km in latitude
+    # 0.1 degree --> ~5.5 km in longitude, ~11 km in latitude
     url = "{host}/timeseries?format=json&starttime=data&endtime=data&param={params}&wkt={wkt}".format(host=config['host'],
                                                                                                       params=','.join(paramlist),
-                                                                                                      wkt=wkt.simplify(0.05, preserve_topology=True))
+                                                                                                      wkt=wkt.simplify(0.1, preserve_topology=True))
 
     logging.debug(url)
 
@@ -314,6 +316,7 @@ def process_time_range(start, end, dataset, db_params, met_params, meta_params, 
 
     print('Reading data for {}-{}'.format(start, end))
 
+    dataset = []
     try:
         if dataset == 'loiste_jse':
             dataset = create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
@@ -339,8 +342,8 @@ def process_time_range(start, end, dataset, db_params, met_params, meta_params, 
     try:
         forest_data = dataset.geom.apply(lambda row: get_forest_data(config, forest_params, wkt.loads(row)))
     except AttributeError:
-        return 0
-    
+        return dataset
+
     #forest_data = pd.DataFrame(forest_data_rows, columns=paramlist, index=dataset.index)
 
     dataset = dataset.join(forest_data)
@@ -461,8 +464,8 @@ def main():
         if end > endtime: end = endtime
 
     for i, d in enumerate(dfs):
-        count = client.gather(d)
-        logging.info('Processed {} records'.format(count))
+        logging.info(client.gather(d))
+        #logging.info('Processed {} records'.format(count))
 
 
 
