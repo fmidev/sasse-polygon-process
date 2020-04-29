@@ -336,7 +336,11 @@ def process_time_range(start, end, dataset, db_params, met_params, meta_params, 
     if len(dataset) < 1 :
         return 0
 
-    forest_data = dataset.geom.apply(lambda row: get_forest_data(config, forest_params, wkt.loads(row)))
+    try:
+        forest_data = dataset.geom.apply(lambda row: get_forest_data(config, forest_params, wkt.loads(row)))
+    except AttributeError:
+        return 0
+    
     #forest_data = pd.DataFrame(forest_data_rows, columns=paramlist, index=dataset.index)
 
     dataset = dataset.join(forest_data)
