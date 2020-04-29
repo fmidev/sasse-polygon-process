@@ -314,18 +314,27 @@ def process_time_range(start, end, dataset, db_params, met_params, meta_params, 
 
     print('Reading data for {}-{}'.format(start, end))
 
-    if dataset == 'loiste_jse':
-        dataset = create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
-    else:
-        dataset = create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
+    try:
+        if dataset == 'loiste_jse':
+            dataset = create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
+        else:
+            dataset = create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
 
-    dataset = dataset.compute()
+        dataset = dataset.compute()
+    except psycopg2.OperationalError as e:
+        print(e)
+        if dataset == 'loiste_jse':
+            dataset = create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
+        else:
+            dataset = create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
+
+        dataset = dataset.compute()
 
     #print(dataset)
     print('Reading data from DB done. Found {} records'.format(len(dataset)))
 
     if len(dataset) < 1 :
-        return
+        return 0
 
     forest_data = dataset.geom.apply(lambda row: get_forest_data(config, forest_params, wkt.loads(row)))
     #forest_data = pd.DataFrame(forest_data_rows, columns=paramlist, index=dataset.index)
