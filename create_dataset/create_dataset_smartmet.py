@@ -131,7 +131,8 @@ def create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, s
 
     #df = gpd.GeoDataFrame(dxf, geometry='geom')
 
-    return dd.from_pandas(df, npartitions=1)
+    return df
+    #return dd.from_pandas(df, npartitions=1)
 
 def create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformer_params, all_params):
     """ Gather dataset from db """
@@ -266,7 +267,7 @@ def get_forest_data(config, params, wkt):
                                                                                                       params=','.join(paramlist),
                                                                                                       wkt=wkt.simplify(0.1, preserve_topology=True))
 
-    logging.debug(url)
+    #print(url)
 
     response = requests.get(url)
     if response.status_code == 200:
@@ -280,6 +281,7 @@ def get_forest_data(config, params, wkt):
 
     met_params = {}
     values = []
+    #print(data)
     for param, value in data.items():
         f = re.search('(?<=@).*(?={)', param).group()
         p = re.search(r'(?<={).*(?=})', param).group()
@@ -290,8 +292,8 @@ def get_forest_data(config, params, wkt):
             attr, func = None, p
             name = f
 
-        met_params[name+' '+params[func]['name']] = float(value)
-        values.append(float(value))
+        met_params[name+' '+params[func]['name']] = value
+        values.append(value)
 
     # Throttle number of requests
     return pd.Series(met_params)
@@ -309,29 +311,29 @@ def stats(geoms, config, params):
 
     return pd.DataFrame(rows, columns=paramlist, index=geoms.index)
 
-def process_time_range(start, end, dataset, db_params, met_params, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params, config, forest_params, dataset_table):
+def process_time_range(start, end, dataset_name, db_params, met_params, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params, config, forest_params, dataset_table):
     """ Process time range """
 
     paramlist = params_to_list(forest_params)
 
-    print('Reading data for {}-{}'.format(start, end))
+    print('Reading data for dataset {} from period {}-{}'.format(dataset_name, start, end))
 
     dataset = []
     try:
-        if dataset == 'loiste_jse':
+        if dataset_name == 'loiste_jse':
             dataset = create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
         else:
             dataset = create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
 
-        dataset = dataset.compute()
+        #dataset = dataset.compute()
     except psycopg2.OperationalError as e:
         print(e)
-        if dataset == 'loiste_jse':
+        if dataset_name == 'loiste_jse':
             dataset = create_dataset_loiste_jse(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
         else:
             dataset = create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_params, storm_params, outage_params, transformers_params, all_params)
 
-        dataset = dataset.compute()
+        #dataset = dataset.compute()
 
     #print(dataset)
     print('Reading data from DB done. Found {} records'.format(len(dataset)))
@@ -339,10 +341,10 @@ def process_time_range(start, end, dataset, db_params, met_params, meta_params, 
     if len(dataset) < 1 :
         return 0
 
-    try:
-        forest_data = dataset.geom.apply(lambda row: get_forest_data(config, forest_params, wkt.loads(row)))
-    except AttributeError:
-        return dataset
+    #try:
+    forest_data = dataset.geom.apply(lambda row: get_forest_data(config, forest_params, wkt.loads(row)))
+    #except AttributeError:
+    #    return dataset
 
     #forest_data = pd.DataFrame(forest_data_rows, columns=paramlist, index=dataset.index)
 
@@ -352,7 +354,8 @@ def process_time_range(start, end, dataset, db_params, met_params, meta_params, 
 
     dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].fillna(0)
     dataset.loc[:,['outages','customers']] = dataset.loc[:,['outages','customers']].astype(int)
-
+    #pd.set_option('display.expand_frame_repr', False)
+    #print(dataset)
     # Drop storm objects without customers or transformers, they are outside the range
     if options.dataset == 'loiste_jse':
         dataset.dropna(axis=0, subset=['all_customers', 'transformers'], inplace=True)

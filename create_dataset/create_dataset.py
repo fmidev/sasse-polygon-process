@@ -257,7 +257,11 @@ def stats(geoms, meta, data):
         #var_median = data.reduce(percentile, dim='band', q=50, allow_lazy=True)
         #var_9q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.9)
         #var_1q = data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[3], bounds[1])).quantile(.1)
-        rows.append([float(data_bbox.mean().values), float(data_bbox.max().values), float(data_bbox.max().values)])
+        try:
+            rows.append([float(data_bbox.mean().values), float(data_bbox.max().values), float(data_bbox.max().values)])
+        except ValueError as e:
+            logging.warning(e)
+            rows.append([0, 0, 0])
 
     return pd.DataFrame(rows, columns=list(meta.keys()), index=geoms.index)
 
@@ -338,7 +342,11 @@ def main():
         start = end
 
     for i, d in enumerate(dfs):
-        dfs[i] = client.gather(d)
+        try:
+            dfs[i] = client.gather(d)
+        except psycopg2.OperationalError as e:
+            logging.error(e)
+            dfs[i] = client.gather(d)
 
     with ProgressBar():
         df = dask.compute(*dfs)
