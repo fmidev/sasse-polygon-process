@@ -95,42 +95,30 @@ forest_params:
   FORESTAGE:Forest:90001::0:0:
     name: Forest age
     aggregation:
-      - "@QUANTILE,0.1"
-      - "@QUANTILE,0.5"
-      - "@QUANTILE,0.9"
       - "@AVG"
+      - "@MAX"
   FORESTCANOPY:Forest:90001::0:0:
     name: Forest canopy cover
     aggregation:
-      - "@QUANTILE,0.1"
-      - "@QUANTILE,0.5"
-      - "@QUANTILE,0.9"
+      - "@MAX"
       - "@AVG"
   FORESTDIAMETER:Forest:90001::0:0:
     name: Forest diameter
     aggregation:
-      - "@QUANTILE,0.1"
-      - "@QUANTILE,0.5"
-      - "@QUANTILE,0.9"
+      - "@MAX"
       - "@AVG"
   FORESTLOCATION:Forest:90001::0:0:
     name: Forest location
     aggregation:
-      - "@QUANTILE,0.1"
-      - "@QUANTILE,0.5"
-      - "@QUANTILE,0.9"
-      - "@AVG"
+        - "@MAX"
+        - "@AVG"
   FORESTTYPE:Forest:90001::0:0:
     name: Forest type
     aggregation:
-      - "@QUANTILE,0.1"
-      - "@QUANTILE,0.5"
-      - "@QUANTILE,0.9"
+      - "@MAX"
       - "@AVG"
   FORESTLENGTH:Forest:90001::0:0:
     name: Forest length
     aggregation:
-      - "@QUANTILE,0.1"
-      - "@QUANTILE,0.5"
-      - "@QUANTILE,0.9"
+      - "@MAX"
       - "@AVG"
