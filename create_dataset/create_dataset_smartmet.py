@@ -483,7 +483,7 @@ if __name__ =='__main__':
     parser.add_argument('--starttime', type=str, default='2010-01-01', help='start time')
     parser.add_argument('--endtime', type=str, default='2019-01-01', help='end time')
     parser.add_argument('--smartmet_config_filename', type=str, default='cnf/smartmet.yaml', help='CNF file containing SmartMet Server pararemters')
-    parser.add_argument('--smartmet_config_name', type=str, default='dev', help='Section name for smartmet')
+    parser.add_argument('--smartmet_config_name', type=str, default='production', help='Section name for smartmet')
     parser.add_argument('--requests_throttle_time', type=int, default=0, help='Sleep time after each SmartMet requests to throttle requests')
 
     if len(sys.argv) <= 1:

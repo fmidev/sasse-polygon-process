@@ -366,7 +366,7 @@ def main():
         ]
 
     #paths = [('Forest canopy cover', 's3://fmi-asi-data-puusto/luke/2017/latvusto/puusto_latvusto_suomi_4326.tif')]
-    chunks = {'y': 10000, 'x': 10000}
+    chunks = {'y': 5000, 'x': 5000}
 
     ars = []
     for name, path in paths:
@@ -384,7 +384,7 @@ def main():
             meta[opname] = 'float'
         metas[name] = meta
 
-    df = dd.from_pandas(dataset, chunksize=1000)
+    df = dd.from_pandas(dataset, npartitions=50)
 
     client.scatter(ars)
     client.scatter(df)
@@ -392,14 +392,8 @@ def main():
     with ProgressBar():
         #dataset = df.apply(lambda row: delayed(stats)(row, ars), axis=1)
         for name, ar in ars:
-            forest_data_op = df.geom.map_partitions(stats, metas[name], ar, meta=pd.DataFrame(metas[name], index=df.index))
-
-        forest_data = forest_data_op.compute().reset_index(drop=True)
-        progress(forest_data)
-
-    dataset = dataset.reset_index(drop=True).join(forest_data)
-
-    #g_dataset = gpd.GeoDataFrame(dataset, geometry=dataset['geom'])
+            forest_data = df.geom.map_partitions(stats, metas[name], ar, meta=pd.DataFrame(metas[name], index=df.index)).compute().reset_index(drop=True)
+            dataset = dataset.reset_index(drop=True).join(forest_data)
 
     logging.info('\nDone. Found {} records'.format(dataset.shape[0]))
 
