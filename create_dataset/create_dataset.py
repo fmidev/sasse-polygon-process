@@ -195,8 +195,8 @@ def create_dataset_energiateollisuus(db_params, start, end, meta_params, geom_pa
     df = pd.DataFrame(results, columns=all_params)
 
     df = sqlio.read_sql_query(sql, conn)
-    df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(wkt.loads)
-
+    #df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(wkt.loads)
+    df.loc[:, 'geom'] = df.loc[:, 'geom'].apply(str)
     #df = gpd.GeoDataFrame(df, geometry='geom')
 
     return df
@@ -431,7 +431,8 @@ def main():
         i += 1
 
     #print(dataset.loc[:, ['class', 'class_customers']])
-    dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].fillna(0)
+    #dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].fillna(0)
+    dataset.fillna(0, inplace=True)
     dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].astype(float)
     dataset.loc[:, ['class', 'class_customers']] = dataset.loc[:, ['class', 'class_customers']].astype(int)
 
