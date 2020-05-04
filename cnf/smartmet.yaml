@@ -122,3 +122,42 @@ forest_params:
     aggregation:
       - "@MAX"
       - "@AVG"
+
+
+forest_params_db:
+  FORESTAGE:Forest:90001::0:0:
+    name: Forest age
+    aggregation:
+      - "@mean"
+      - "@max"
+      - "@std"
+  XX:
+    name: Forest site fertility
+    aggregation:
+      - "@mean"
+      - "@max"
+      - "@std"
+  FORESTCANOPY:Forest:90001::0:0:
+    name: Forest canopy cover
+    aggregation:
+      - "@mean"
+      - "@max"
+      - "@std"
+  FORESTDIAMETER:Forest:90001::0:0:
+    name: Forest stand mean diameter
+    aggregation:
+      - "@mean"
+      - "@max"
+      - "@std"
+  FORESTLOCATION:Forest:90001::0:0:
+    name: Forest site main class
+    aggregation:
+      - "@mean"
+      - "@max"
+      - "@std"  
+  FORESTLENGTH:Forest:90001::0:0:
+    name: Forest stand mean height
+    aggregation:
+      - "@mean"
+      - "@max"
+      - "@std"
