@@ -5,7 +5,24 @@ from functools import partial
 import pandas as pd
 from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, mean_squared_error, mean_absolute_error, r2_score, classification_report, make_scorer
+from sklearn.preprocessing import label_binarize
+
 from scipy.stats import expon
+from scipy import interp
+
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+import matplotlib.patches as mpatches
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import seaborn as sns
+
+from dask.distributed import Client
+#from dask import delayed
+#import dask.dataframe as dd
+import dask, ast, itertools
+import dask_ml.model_selection as dcv
+
+from sklearn.metrics import roc_curve, auc, precision_score, f1_score, recall_score, average_precision_score, precision_recall_curve, confusion_matrix, classification_report
 
 def evaluate(model, options, data=None, dataset_file=None, fh=None, viz=None):
     """
@@ -82,7 +99,38 @@ def param_grid(model):
 
     return param_grid
 
-def cv(X, y, model, options, fh):
+
+def cv(model, param_grid, X, y, n_iter=20): 
+    """ Cross validation """
+
+    cv_results = None
+    print('..performing cv search...')
+    searches = []
+
+    # Define jobs
+    random_search = dcv.RandomizedSearchCV(model, 
+                                           param_grid, 
+                                           n_iter=n_iter,
+                                           cv=5,
+                                           scoring=['f1_macro'], #, 'accuracy'],
+                                           return_train_score=True,
+                                           refit=False).fit(X, y)
+    # Gather results
+    cv_results = pd.DataFrame(random_search.cv_results_) #.head(1)    
+    cv_results.sort_values(by=['mean_test_f1_macro'], inplace=True, ascending=False, ignore_index=True)
+    print(cv_results.head())
+    
+    best_params = cv_results.loc[0,'params']
+    model = model.set_params(**best_params)
+
+    print('Using configuration: {}'.format(best_params))
+
+    with joblib.parallel_backend('dask'):
+        model.fit(X, y)
+        
+    return model, cv_results
+
+def cv_(X, y, model, options, fh):
     """
     Cross-validate
 
@@ -473,3 +521,300 @@ def speed(row1, row2, threshold = None, missing = None):
         dist = missing
 
     return dist
+
+
+def gridcv(model, param_grid, X, y): 
+    cv_results = None
+    print('..performing cv search...')
+    searches = []
+
+    # Define jobs
+    grid_search = dcv.GridSearchCV(model, 
+                                   param_grid, 
+                                   scoring=['f1_macro', 'f1_micro', 'accuracy'],
+                                   return_train_score=True,
+                                   refit=False,
+                                   n_jobs=-1).fit(X, y)
+    
+    # Gather results
+    cv_results = pd.DataFrame(grid_search.cv_results_) #.head(1)    
+    cv_results.sort_values(by=['mean_test_f1_macro'], inplace=True, ascending=False, ignore_index=True)
+    print(cv_results.head())
+    
+    best_params = cv_results.loc[0,'params']
+    model = model.set_params(**best_params)
+
+    print('Using configuration: {}'.format(best_params))
+
+    with joblib.parallel_backend('dask'):
+        model.fit(X, y)
+        
+    return model, cv_results
+
+##############################################
+# Visualisation functions
+##############################################
+
+
+def plot_confusion_matrix(y_true, y_pred, classes,
+                          normalize=False,
+                          cmap=plt.cm.YlOrBr,
+                          filename=None,
+                          fontsize=20):
+    """
+    Normalization can be applied by setting `normalize=True`.
+    """
+    plt.clf()
+    plt.rc('font', size=fontsize)
+
+    fig, ax = plt.subplots(figsize=(6,6))
+    np.set_printoptions(precision=2)
+    cm = confusion_matrix(y_true, y_pred)
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    plt.grid(False, which='major')
+        
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    tick_marks = np.arange(len(classes))
+    ax.xaxis.tick_top()
+    plt.xticks(tick_marks, classes) #, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    fig.subplots_adjust(bottom=0.12)
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+        
+    print(classification_report(y_true, y_pred))
+
+def prec_rec_curve(y, y_pred, n_classes, fontsize=20):
+    """
+    Precision - Recall Curve
+    """
+    plt.rc('font', size=fontsize)
+    colors=['xkcd:sky blue', 'xkcd:forest green', 'xkcd:dark red', 'xkcd:dark yellow']
+    
+    y = label_binarize(y, classes=np.arange(n_classes))
+
+    # For each class
+    precision = dict()
+    recall = dict()
+    average_precision = dict()
+    for i in range(n_classes):
+        precision[i], recall[i], _ = precision_recall_curve(y[:, i], y_pred[:, i])
+        average_precision[i] = average_precision_score(y[:, i], y_pred[:, i])
+
+    # A "micro-average": quantifying score on all classes jointly
+    precision["micro"], recall["micro"], _ = precision_recall_curve(y.ravel(), y_pred.ravel())
+    average_precision["micro"] = average_precision_score(y, y_pred, average="micro")
+    print('Average precision score, micro-averaged over all classes: {0:0.2f}'.format(average_precision["micro"]))
+
+    plt.figure(figsize=(12, 12))
+    f_scores = np.linspace(0.2, 0.8, num=4)
+    lines = []
+    labels = []
+    for f_score in f_scores:
+        x = np.linspace(0.01, 1)
+        y_ = f_score * x / (2 * x - f_score)
+        l, = plt.plot(x[y_ >= 0], y_[y_ >= 0], color='gray', alpha=0.5)
+        plt.annotate('F1={0:0.1f}'.format(f_score), xy=(0.9, y_[45] + 0.02))
+
+    lines.append(l)
+    labels.append('F1 curves')
+
+    l, = plt.plot(recall["micro"], precision["micro"], color='gold', lw=2)
+    lines.append(l)
+    labels.append('Micro-average (area = {0:0.2f})'
+    ''.format(average_precision["micro"]))
+
+    for i in range(n_classes):
+        l, = plt.plot(recall[i], precision[i], lw=2, color=colors[i])
+        lines.append(l)
+        labels.append('Class {0} (area = {1:0.2f})'.format(i, average_precision[i]))
+
+    fig = plt.gcf()
+    fig.subplots_adjust(bottom=0.25)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xticks(np.arange(.2, 1., .2))
+    plt.xlabel('Recall', labelpad=20)
+    plt.ylabel('Precision', labelpad=20)
+    plt.title('Precision-Recall Curve', pad=20)
+    plt.legend(lines, labels, loc=(0, -.2), ncol=2)
+
+def feature_importance(data, feature_names = None, fontsize=20):
+    """ Plot feature importance """
+
+    fig, ax = plt.subplots(figsize=(24,18))
+
+    plt.clf()
+    plt.rc('font', size=fontsize)
+
+    if feature_names is None:
+        feature_names = range(0,len(data))
+    else:
+        plt.xticks(rotation=90, fontsize=fontsize)
+        fig.subplots_adjust(bottom=0.5)
+
+    plt.yticks(fontsize=fontsize*2/3)
+    plt.bar(feature_names, data, align='center')
+    plt.xlabel('Components', fontsize=fontsize, labelpad=20)
+    plt.ylabel('Importance', fontsize=fontsize, labelpad=20)
+    
+    #ax.tick_params(axis='both', which='major', labelsize=fontsize)
+    #ax.tick_params(axis='both', which='minor', labelsize=fontsize)
+    
+    # plt.tight_layout()
+    #fig.subplots_adjust(bottom=0.5)
+
+    #self._save(plt, filename) 
+    
+
+
+def read_data(fname_train, fname_test, options):
+    """ Read data from csv file """
+    
+    # Train
+    data_train = pd.read_csv(fname_train)
+    
+    X_train = data_train.loc[:, options.feature_params]
+    y_train = data_train.loc[:, options.label].values.ravel()
+    
+    print('Train data shape: {}'.format(X_train.shape))
+    
+    # Test
+    if fname_test is not None:        
+        data_test = pd.read_csv(fname_test)
+                
+        X_test = data_test.loc[:, options.feature_params]
+        y_test = data_test.loc[:, options.label].values.ravel()
+
+        print('Test data shape: {}'.format(X_test.shape))
+    else:
+        X_test, y_test = None, None
+    
+    return X_train, y_train, X_test, y_test
+
+def plot_class_hist(data_train, data_test,title='', fontsize=10):
+
+    fig, ax = plt.subplots(figsize=(15,4))
+    plt.rc('font', size=fontsize)
+    tickfontsize=0.8*fontsize
+    
+    ##### Plot 1
+    ax = plt.subplot(1,2,1)
+
+    data_train.loc[:, 'class'].hist(ax=ax, color='xkcd:tea')
+
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim((ymin, ymax*1.1))
+    
+    plt.title('Train set', fontsize=fontsize)
+    plt.ylabel('Record count', fontsize=fontsize)
+    plt.xlabel('Class', fontsize=fontsize)
+    plt.yticks(fontsize=tickfontsize)
+    plt.xticks(fontsize=tickfontsize)
+
+    i=0
+    for rect in ax.patches:
+        if rect.get_height() > 0:
+            height = rect.get_height()
+            ax.annotate(f'{int(height)}', xy=(rect.get_x()+rect.get_width()/2, height), 
+                        xytext=(0, 5), textcoords='offset points', ha='center', va='bottom') 
+        i+=1
+    
+    plt.grid(False)
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+    
+    ##### Plot 2 
+    
+    ax = plt.subplot(1,2,2)
+    data_test.loc[:, 'class'].hist(ax=ax, color='xkcd:dust')    
+    
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim((ymin, ymax*1.1))
+    
+    plt.grid(False)
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+
+    plt.title('Test set', fontsize=fontsize)
+    plt.ylabel('Record count', fontsize=fontsize)
+    plt.xlabel('Class', fontsize=fontsize)
+    plt.yticks(fontsize=tickfontsize)
+    plt.xticks(fontsize=tickfontsize)
+    
+    i=0
+    for rect in ax.patches:
+        if rect.get_height() > 0:
+            height = rect.get_height()
+            ax.annotate(f'{int(height)}', xy=(rect.get_x()+rect.get_width()/2, height), 
+                        xytext=(0, 5), textcoords='offset points', ha='center', va='bottom') 
+        i+=1
+    
+    plt.suptitle(title, x=.22, y=1.03)
+    
+def plot_roc(y, y_pred, n_classes=4, fontsize=20):
+    """
+    Plot multiclass ROC
+    """
+    
+    colors=['xkcd:sky blue', 'xkcd:forest green', 'xkcd:dark red', 'xkcd:dark yellow']
+    
+    fig, ax1 = plt.subplots(figsize=(12,12))
+    plt.clf()
+    plt.rc('font', size=fontsize)
+    
+    y = label_binarize(y, classes=np.arange(n_classes))
+
+    # Compute ROC curve and ROC area for each class
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+
+    for i in range(n_classes):
+        fpr[i], tpr[i], threshhold = roc_curve(y[:, i], y_pred[:,i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+        print('AUC for class {} is {}'.format(i, roc_auc[i]))
+
+    # Compute average ROC curve and ROC area
+    # First aggregate all false positive rates
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+
+    # Then interpolate all ROC curves at this points
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(n_classes):
+        mean_tpr += interp(all_fpr, fpr[i], tpr[i])
+
+    # Finally average it and compute AUC
+    mean_tpr /= n_classes
+
+    fpr["macro"] = all_fpr
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+
+    plt.plot([0, 1], [0, 1], 'k--')
+    for i in range(n_classes):        
+        plt.plot(fpr[i], tpr[i], color=colors[i], label="Class {0} (AUC: {1:0.2f})".format(i, roc_auc[i]))
+
+    plt.plot(fpr["macro"], tpr["macro"],
+             label='Average (AUC: {0:0.2f})'
+             ''.format(roc_auc["macro"]),
+             color='navy', linestyle=':', linewidth=4)
+    
+    plt.xlabel('False positive rate', fontsize=fontsize)
+    plt.ylabel('True positive rate', fontsize=fontsize)
+    plt.title('ROC curve')
+    plt.legend(loc="lower right")
+    
+    plt.yticks(fontsize=fontsize*2/3)
+    plt.xticks(fontsize=fontsize*2/3)
