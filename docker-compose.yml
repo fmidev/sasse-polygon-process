@@ -69,7 +69,7 @@ services:
       dockerfile: Dockerfile
     container_name: classifier
     image: sasse:classifier
-    command: python -u classifier/train_classifier.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-test}
+    command: python -u classifier/train_classifier.py --config_filename ${config_filename:-cnf/rfc.ini} --config_name ${config_name:-thin} --train_data ${train_data:-data/energiateollisuus_random_15_all_res.csv} --test_data ${test_data:-data/energiateollisuus_random_15_test.csv}
 
   classify:
     volumes:

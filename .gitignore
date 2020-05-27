@@ -1,6 +1,8 @@
 cnf/sasse_aws.yaml
 cnf/aws-secret.yml
 
+data/*.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

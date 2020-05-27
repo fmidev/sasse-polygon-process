@@ -33,6 +33,27 @@ class FileHandler(object):
             resource = boto3.resource('s3')
             self.bucket = resource.Bucket(self.bucket_name)
 
+    def read_data(self, filenames, options):
+        """
+        Read data from csv file(s). Download it from bucket if necessary
+        """
+        datasets = []
+
+        for f in filenames:
+            self._download_from_bucket(f, f)
+
+            # Train
+            data = pd.read_csv(f)
+
+            X = data.loc[:, options.feature_params]
+            y = data.loc[:, options.label].values.ravel()
+
+            logging.info('Train data from {} shape: {}'.format(f, X.shape))
+
+            datasets.append((X, y))
+
+        return datasets
+
     def dataset_from_csv(self, filename, time_column='point_in_time'):
         """
         Read dataset from csv file
