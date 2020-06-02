@@ -253,10 +253,20 @@ class Viz:
             plt.xticks(rotation=90)
             fig.subplots_adjust(bottom=0.3)
 
-        plt.bar(feature_names, data, align='center')
-        plt.xlabel('components')
-        plt.ylabel('importance')
+        plt.bar(feature_names, data, align='center', color='xkcd:sky blue')
+        plt.yticks(fontsize=fontsize*2/3)
 
+        plt.xlabel('Components', fontsize=fontsize, labelpad=20)
+        plt.ylabel('Importance', fontsize=fontsize, labelpad=20)
+
+        #ax.tick_params(axis='both', which='major', labelsize=fontsize)
+        #ax.tick_params(axis='both', which='minor', labelsize=fontsize)
+
+        plt.gca().spines['top'].set_visible(False)
+        plt.gca().spines['right'].set_visible(False)
+
+        plt.tight_layout()
+        
         self._save(plt, filename)
 
         logging.debug("Saved feature importance to "+filename)

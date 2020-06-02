@@ -53,8 +53,6 @@ def read_options(options):
         options.label = options.label.split(',')
         options.meta_params = options.meta_params.split(',')
 
-        options.dataset_file = 'data/classification_dataset_{}.csv'.format(options.dataset)
-
         if hasattr(options, 'test_dataset'):
             options.test_dataset_file = 'data/classification_dataset_{}.csv'.format(options.test_dataset)
 
@@ -74,6 +72,7 @@ def read_options(options):
         _bval('save_data')
         _intval('n_iter_search', 10)
         _bval('debug')
+        _intval('max_size', None)
 
         # linear regression
         _fval('alpha')

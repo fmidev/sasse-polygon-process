@@ -246,4 +246,38 @@ class DBHandler(object):
         sql = """SELECT "{}" FROM sasse.classification_dataset""".format('","'.join(params))
 
         return self._query(sql)
-    
+
+
+    def get_geom_for_dataset_rows(self, df):
+        """
+        Get geom from db for demo purposes. Assining dataframe rows based on point_in_time, weather_parameter, low_limit and area_m2.
+        """
+        df['geom'] = None
+        for id, row in df.iterrows():
+            sql = """
+            SELECT
+            	ST_AsText(geom)
+            FROM
+            	sasse.classification_dataset_energiateollisuus_forest a,
+            	sasse.stormcell b,
+            	sasse.stormcell_features c
+            WHERE
+            	a.point_in_time = '{point_in_time}'
+            	AND a.weather_parameter = '{weather_parameter}'
+            	AND a.low_limit = {low_limit}
+                AND a.area_m2 = {area_m2}
+            	AND b.point_in_time = a.point_in_time
+            	AND a.area_m2 = c.area_m2
+            	AND b.id = c.polygon_id
+            """.format(point_in_time=row.point_in_time,
+                       weather_parameter='WindGust',
+                       low_limit=15,
+                       area_m2=int(row.area_m2))
+
+            try:
+                df.loc[id, 'geom'] = self._query(sql)[0][0]
+            except IndexError:
+                logging.warning('Geom not found for {} with area {}'.format(row.point_in_time, int(row.area_m2)))
+                logging.debug(sql)
+
+        return df
