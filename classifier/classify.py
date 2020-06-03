@@ -29,13 +29,15 @@ def main():
     # TODO change to read from operational data
     data = pd.DataFrame(dbh.get_dataset(all_params), columns=all_params)
 
-    # TODO
+    # TODO use original id stored in db. The id is used to assign predicted classes to a storm object (while saving to db)
     # As far as we do not have operational data, dummy ids are used
     data.loc[:, 'id'] = 0
 
     data = data.loc[data['weather_parameter'] == 'WindGust']
 
-    # TODO Add week
+    # Add week
+    data['point_in_time'] = pd.to_datetime(data['point_in_time'])
+    data['week'] = data['point_in_time'].dt.week
 
     X = data.loc[:, features]
     X = scaler.transform(X)

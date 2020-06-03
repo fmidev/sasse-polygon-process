@@ -81,7 +81,7 @@ services:
       dockerfile: Dockerfile
     container_name: classifier
     image: sasse:classifier
-    command: python -u classifier/classify.py --starttime ${StartTime:-2010-06-12T00:00:00} --endtime ${EndTime:-2010-06-13T00:00:00} --config_filename ${config_filename:-cnf/options.ini} --config_name ${config_name:-thin_energiateollisuus} --db_config_name local --model_file ${model_file:-models/svc/energiateollisuus/thin/recent/model.joblib} --scaler_file ${scaler_file:-models/scaler/energiateollisuus_recent_15_thin.joblib}
+    command: python -u classifier/classify.py --starttime ${StartTime:-2010-06-12T00:00:00} --endtime ${EndTime:-2010-06-13T00:00:00} --config_filename ${config_filename:-cnf/options.ini} --config_name ${config_name:-thin_energiateollisuus} --db_config_name local --model_file ${model_file:-models/svc/energiateollisuus/random/thin/model.joblib} --scaler_file ${scaler_file:-models/scaler/energiateollisuus_random_15_thin.joblib}
 
   examples:
     volumes:
