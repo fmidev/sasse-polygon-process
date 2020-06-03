@@ -7,7 +7,7 @@ import datetime as dt
 from datetime import timedelta
 import pandas as pd
 from util import get_param_names
-from config import read_options
+#from config import read_options
 
 def main():
 
@@ -25,18 +25,20 @@ def main():
     features, meta_params, labels, all_params = get_param_names(options.param_config_filename)
 
     scaler = fh.load_model(options.scaler_file)
-    # TODO change to read from operational data
-    if options.dataset_file is not None:
-        data = fh.read_data([options.dataset_file], options, return_meta=True, starttime=options.starttime, endtime=options.endtime)[0]
-        X, y, meta = data
-    else:
-        data = pd.DataFrame(dbh.get_dataset(all_params), columns=all_params)
-        # As far as we do not have operational data, dummy ids are used
-        data.loc[:, 'id'] = 0
 
-        data = data.loc[data['weather_parameter'] == 'WindGust']
-        X = data.loc[:, features]
-        X = scaler.transform(X)
+    # TODO change to read from operational data
+    data = pd.DataFrame(dbh.get_dataset(all_params), columns=all_params)
+
+    # TODO
+    # As far as we do not have operational data, dummy ids are used
+    data.loc[:, 'id'] = 0
+
+    data = data.loc[data['weather_parameter'] == 'WindGust']
+
+    # TODO Add week
+
+    X = data.loc[:, features]
+    X = scaler.transform(X)
 
     model = fh.load_model(options.model_file)
 
@@ -44,17 +46,9 @@ def main():
     y_pred = model.predict(X)
 
     # Save to db
-    if options.output_file is None:
-        dbh.save_classes(data.loc[:, 'id'], y_pred)
-    else:
-        df = pd.DataFrame(meta, columns=options.meta_params)
-        X_inv = pd.DataFrame(scaler.inverse_transform(X), columns=X.columns)
-        df = pd.concat([df.reset_index(drop=True), X_inv.reset_index(drop=True)], axis=1)
-        df = dbh.get_geom_for_dataset_rows(df)
-        df['y_pred'] = y_pred
-        df['y'] = y
-        fh.df_to_csv(df, options.output_file)
-        # fh.save_prediction(meta, y_pred, y, options.output_file)
+    logging.info('Saving...')
+    dbh.save_classes(data.loc[:, 'id'], y_pred)
+    logging.info('done.')
 
 if __name__ =='__main__':
 
@@ -65,10 +59,8 @@ if __name__ =='__main__':
     parser.add_argument('--db_config_name', type=str, default='production', help='Section name in db cnf file to read connection parameters')
     parser.add_argument('--bucket', type=str, default='fmi-asi-sasse-assets', help='Bucket name where models are stored')
     parser.add_argument('--param_config_filename', type=str, default='cnf/smartmet.yaml', help='Param config filename')
-    parser.add_argument('--config_filename', type=str, default='cnf/options.ini', help='Config filename for training config')
-    parser.add_argument('--config_name', type=str, default='thin', help='Config section for training config')
-    parser.add_argument('--dataset_file', type=str, default=None, help='If set, read dataset from csv file')
-    parser.add_argument('--output_file', type=str, default=None, help='If set, results are saved to given csv file')
+    #parser.add_argument('--config_filename', type=str, default='cnf/options.ini', help='Config filename for training config')
+    #parser.add_argument('--config_name', type=str, default='thin', help='Config section for training config')
     parser.add_argument('--model_file', type=str, default=None, help='Model filename (required)')
     parser.add_argument('--scaler_file', type=str, default=None, help='Scaler filename (required)')
 
@@ -77,7 +69,7 @@ if __name__ =='__main__':
         sys.exit()
 
     options = parser.parse_args()
-    read_options(options)
+    #read_options(options)
 
     logging.basicConfig(format=("[%(levelname)s] %(asctime)s %(filename)s:%(funcName)s:%(lineno)s %(message)s"),
                         level=logging.INFO)

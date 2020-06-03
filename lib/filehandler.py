@@ -65,6 +65,7 @@ class FileHandler(object):
                 raise ValueError("Missing parameter(s) {}".format(','.join(missing)))
 
             if starttime is not None:
+                print(starttime)
                 data = data[(data['point_in_time'] >= starttime)]
             if endtime is not None:
                 data = data[(data['point_in_time'] <= endtime)]
@@ -80,7 +81,7 @@ class FileHandler(object):
                 meta = data.loc[:, options.meta_params]
 
             logging.info('Reading data from {} shape: {}'.format(f, X.shape))
-            
+
             datasets.append((X, y, meta))
 
         return datasets
@@ -133,6 +134,7 @@ class FileHandler(object):
         """
         Store Pandas DataFrame to csv file and upload it to bucket if ext_filename is set
         """
+        Path(os.path.dirname(local_filename)).mkdir(parents=True, exist_ok=True)
         if df is not None and len(df) > 0:
             df.to_csv(local_filename, header=store_header, index_label='id')
             logging.info('Stored data to {}'.format(local_filename))

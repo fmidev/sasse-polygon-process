@@ -81,7 +81,21 @@ services:
       dockerfile: Dockerfile
     container_name: classifier
     image: sasse:classifier
-    command: python -u classifier/classify.py --starttime ${StartTime:-2010-06-12T00:00:00} --endtime ${EndTime:-2010-06-13T00:00:00} --config_filename ${config_filename:-cnf/options.ini} --config_name ${config_name:-thin_energiateollisuus} --db_config_name local --dataset_file ${dataset_file:-data/energiateollisuus_recent_15_thin_test.csv} --model_file ${model_file:-models/svc/energiateollisuus/thin/recent/model.joblib} --scaler_file ${scaler_file:-models/scaler/energiateollisuus_recent_15_thin.joblib} --output_file ${output_file:-results/svc/energiateollisuus/thin/recent/example_prediction.csv}
+    command: python -u classifier/classify.py --starttime ${StartTime:-2010-06-12T00:00:00} --endtime ${EndTime:-2010-06-13T00:00:00} --config_filename ${config_filename:-cnf/options.ini} --config_name ${config_name:-thin_energiateollisuus} --db_config_name local --model_file ${model_file:-models/svc/energiateollisuus/thin/recent/model.joblib} --scaler_file ${scaler_file:-models/scaler/energiateollisuus_recent_15_thin.joblib}
+
+  examples:
+    volumes:
+      - .:/usr/src/app:Z
+    environment:
+      AWS_ACCESS_KEY_ID: ***REMOVED***
+      AWS_SECRET_ACCESS_KEY: ***REMOVED***
+    build:
+      context: ./classifier
+      dockerfile: Dockerfile
+    container_name: classifier
+    image: sasse:classifier
+    command: python -u classifier/create_examples.py --config_filename ${config_filename:-cnf/options.ini} --config_name ${config_name:-thin_energiateollisuus} --db_config_name local --example_config_file cnf/examples.yaml
+
 
   evaluate:
     volumes:
