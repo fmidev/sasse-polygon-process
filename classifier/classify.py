@@ -36,7 +36,7 @@ def main():
     data = data.loc[data['weather_parameter'] == 'WindGust']
 
     # Add week
-    data['point_in_time'] = pd.to_datetime(data['point_in_time'])
+    data['point_in_time'] = pd.to_datetime(data['point_in_time'], utc=True)
     data['week'] = data['point_in_time'].dt.week
 
     X = data.loc[:, features]

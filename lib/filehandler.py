@@ -62,10 +62,11 @@ class FileHandler(object):
 
             missing = list(set(options.feature_params + options.meta_params + options.label)-set(data.columns.values))
             if len(missing) > 0:
-                raise ValueError("Missing parameter(s) {}".format(','.join(missing)))
+                logging.warning("Missing parameter(s) {}".format(','.join(missing)))
 
+            if starttime is not None or endtime is not None:
+                data['point_in_time'] = pd.to_datetime(data['point_in_time'], utc=True)
             if starttime is not None:
-                print(starttime)
                 data = data[(data['point_in_time'] >= starttime)]
             if endtime is not None:
                 data = data[(data['point_in_time'] <= endtime)]

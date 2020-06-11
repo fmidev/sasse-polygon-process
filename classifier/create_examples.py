@@ -33,13 +33,13 @@ def main():
         data = fh.read_data([setup['dataset_file']],
                             options,
                             return_meta=True,
-                            starttime=setup['starttime'].strftime('%Y-%m-%dT%H:%M:%S'),
-                            endtime=setup['endtime'].strftime('%Y-%m-%dT%H:%M:%S'))[0]
+                            starttime=setup['starttime'], #.strftime('%Y-%m-%dT%H:%M:%S'),
+                            endtime=setup['endtime'])[0] #.strftime('%Y-%m-%dT%H:%M:%S'))[0]
         X, y, meta = data
 
         model = fh.load_model(setup['model_file'])
         scaler = fh.load_model(setup['scaler_file'])
-        
+
         logging.info('Predicting with {} samples...'.format(len(X)))
         y_pred = model.predict(X)
 

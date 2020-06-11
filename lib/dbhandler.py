@@ -265,14 +265,15 @@ class DBHandler(object):
             	a.point_in_time = '{point_in_time}'
             	AND a.weather_parameter = '{weather_parameter}'
             	AND a.low_limit = {low_limit}
-                AND a.area_m2 = {area_m2}
+                AND a.area_m2 > {area_m2_1} AND a.area_m2 < {area_m2_2}
             	AND b.point_in_time = a.point_in_time
             	AND a.area_m2 = c.area_m2
             	AND b.id = c.polygon_id
             """.format(point_in_time=row.point_in_time,
                        weather_parameter='WindGust',
                        low_limit=15,
-                       area_m2=int(row.area_m2))
+                       area_m2_1=int(row.area_m2)-10,
+                       area_m2_2=int(row.area_m2)+10)
 
             try:
                 df.loc[id, 'geom'] = self._query(sql)[0][0]
