@@ -24,7 +24,7 @@ Following actions can be used to fetch new versions of the files:
 
 ### Power outage data
 
-Power outage data is received from power distribution companies. It is loaded to db using notebooks _dataset_to_db_ and _jse_dataset_to_db_.
+Power outage data is received from power distribution companies.
 
 ## Track and extract predictive features
 
