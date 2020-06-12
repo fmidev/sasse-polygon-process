@@ -3,6 +3,7 @@
 CSV file handler
 """
 import sys, logging, os, boto3
+from pathlib import Path
 import numpy as np
 #import datetime
 #from configparser import ConfigParser
@@ -33,6 +34,59 @@ class FileHandler(object):
             resource = boto3.resource('s3')
             self.bucket = resource.Bucket(self.bucket_name)
 
+    def cut_classes(self, dataset, classes, max_size, label):
+        """ Decrease dataset size by cutting requested classes smaller """
+
+        # Cherry picked classes
+        class_dfs = []
+        for c in classes:
+            picked_data = dataset.loc[(dataset.loc[:,label] == c),:].reset_index(drop=True)
+            class_dfs.append(picked_data.loc[0:min(len(picked_data), max_size),:])
+            #class_dfs.append(picked_data.sample(n=min(len(picked_data), max_size)))
+
+        # Concat
+        data = pd.concat(class_dfs)
+        return data
+
+    def read_data(self, filenames, options, return_meta=False, starttime=None, endtime=None):
+        """
+        Read data from csv file(s). Download it from bucket if necessary
+        """
+        datasets = []
+
+        for f in filenames:
+            self._download_from_bucket(f, f)
+
+            # Train
+            data = pd.read_csv(f)
+
+            missing = list(set(options.feature_params + options.meta_params + options.label)-set(data.columns.values))
+            if len(missing) > 0:
+                logging.warning("Missing parameter(s) {}".format(','.join(missing)))
+
+            if starttime is not None or endtime is not None:
+                data['point_in_time'] = pd.to_datetime(data['point_in_time'], utc=True)
+            if starttime is not None:
+                data = data[(data['point_in_time'] >= starttime)]
+            if endtime is not None:
+                data = data[(data['point_in_time'] <= endtime)]
+
+            if options.max_size is not None:
+                data = self.cut_classes(data, [0,1,2], options.max_size, options.label[0])
+
+            X = data.loc[:, options.feature_params]
+            y = data.loc[:, options.label].values.ravel()
+
+            meta = None
+            if return_meta:
+                meta = data.loc[:, options.meta_params]
+
+            logging.info('Reading data from {} shape: {}'.format(f, X.shape))
+
+            datasets.append((X, y, meta))
+
+        return datasets
+
     def dataset_from_csv(self, filename, time_column='point_in_time'):
         """
         Read dataset from csv file
@@ -44,9 +98,8 @@ class FileHandler(object):
         """
         return pd.from_csv(filename, parse_dates=[time_column])
 
-    def load_model(self, save_path, force=False):
+    def load_model(self, filename, force=False):
         """ Load model from given path """
-        filename = save_path + '/model.joblib'
         logging.info('Loading model from {}...'.format(filename))
         self._download_from_bucket(filename, filename, force=False)
         return load(filename)
@@ -82,6 +135,7 @@ class FileHandler(object):
         """
         Store Pandas DataFrame to csv file and upload it to bucket if ext_filename is set
         """
+        Path(os.path.dirname(local_filename)).mkdir(parents=True, exist_ok=True)
         if df is not None and len(df) > 0:
             df.to_csv(local_filename, header=store_header, index_label='id')
             logging.info('Stored data to {}'.format(local_filename))
@@ -91,6 +145,17 @@ class FileHandler(object):
 
         if self.s3:
             self._upload_to_bucket(local_filename, local_filename)
+
+    def save_prediction(self, meta, y_pred, y, filename):
+        """
+        Save prediction results to csv file for visualisation purposes.
+        """
+        df = pd.DataFrame(meta)
+        df['y_pred'] = y_pred
+        df['y'] = y
+        print(df)
+        df.loc[:, 'id'] = df.index
+        self.df_to_csv(df, filename, store_header=False)
 
     def _upload_dir_to_bucket(self, path, ext_path):
         """
@@ -152,6 +217,8 @@ class FileHandler(object):
             return
         if os.path.exists(local_filename) and force:
             logging.info('File {} already exists. Overwriting...'.format(local_filename))
+
+        Path(os.path.dirname(local_filename)).mkdir(parents=True, exist_ok=True)
 
         if self.s3:
             self.bucket.download_file(ext_filename, local_filename)
