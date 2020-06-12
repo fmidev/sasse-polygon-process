@@ -1,5 +1,6 @@
 cnf/sasse_aws.yaml
 cnf/aws-secret.yml
+cnf/aws
 
 data/*.csv
 
@@ -11,7 +12,6 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-bin/
 build/
 develop-eggs/
 dist/

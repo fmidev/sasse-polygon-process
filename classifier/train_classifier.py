@@ -118,7 +118,7 @@ def main():
 if __name__ =='__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_filename', type=str, default='cnf/rfc.ini', help='Config filename for training config')
+    parser.add_argument('--config_filename', type=str, default='cnf/options.ini', help='Config filename for training config')
     parser.add_argument('--config_name', type=str, default='thin', help='Config section for training config')
     parser.add_argument('--train_data', type=str, default='', help='Train dtaset file')
     parser.add_argument('--test_data', type=str, default='', help='Test dataset file')
