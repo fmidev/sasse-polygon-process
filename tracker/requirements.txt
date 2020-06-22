@@ -94,7 +94,7 @@ urllib3==1.24.3
 virtualenv==16.4.3
 wcwidth==0.1.7
 webencodings==0.5.1
-Werkzeug==0.14.1
+Werkzeug==0.15.3
 widgetsnbextension==3.4.2
 zarr==2.3.2
 zipp==0.6.0
