@@ -1,4 +1,4 @@
-This repository is used to create training dataset and train a power outage model. Operative running code is in another repository. This code is open to support an related article. The data is, however, propriety data of the power distribution companies. The operative prediction code (running the model) is also in another, private, repository.
+This repository is used to create training dataset and train a power outage model. Operative running code is in another repository. This code is open to support an related article. The data is, however, propriety data of the power distribution companies.
 
 The overall process is following:
 1. Fetch and prepare necessary data
