@@ -112,7 +112,10 @@ def main():
 
         viz.rfc_feature_importance(importances, fname, names)
 
-    fh.save_model(model, options.save_path)
+    if options.model == 'svct':
+        fh.save_svct(model, options.save_path)
+    else:
+        fh.save_model(model, options.save_path)
 
 
 if __name__ =='__main__':

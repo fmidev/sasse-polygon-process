@@ -12,6 +12,7 @@ import pandas as pd
 import geopandas as gpd
 from shapely import wkt
 from joblib import dump, load
+from model.svct import SVCT
 
 class FileHandler(object):
 
@@ -101,8 +102,36 @@ class FileHandler(object):
     def load_model(self, filename, force=False):
         """ Load model from given path """
         logging.info('Loading model from {}...'.format(filename))
-        self._download_from_bucket(filename, filename, force=False)
+        self._download_from_bucket(filename, filename, force=force)
         return load(filename)
+
+    def load_svct(self, save_path, force=False):
+        """
+        Load SVCT
+        """
+        logging.info('Loading model from {}...'.format(savepath))
+        fname1 = save_path + '/model1.joblib'
+        self._download_from_bucket(fname1, fname1, force=force)
+        model1 = load(fname1)
+
+        fname2 = save_path + '/model2.joblib'
+        self._download_from_bucket(fname1, fname1, force=force)
+        model2 = load(fname2)
+
+        model = SVCT()
+        model.model1 = model1
+        model.model2 = model2
+
+        return model
+
+    def save_svct(self, model, save_path):
+        """
+        Save SVCT
+        """
+        fname1 = save_path + '/model1.joblib'
+        self.save_scikit_file(model.model1, fname1)
+        fname2 = save_path + '/model2.joblib'
+        self.save_scikit_file(model.model2, fname2)
 
     def save_model(self, model, save_path):
         """
