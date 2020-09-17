@@ -81,7 +81,7 @@ class FileHandler(object):
             if return_meta:
                 meta = data.loc[:, options.meta_params]
 
-            logging.info('Reading data from {} shape: {}'.format(f, X.shape))
+            logging.info('Read data from {}, shape: {}'.format(f, X.shape))
 
             datasets.append((X, y, meta))
 
@@ -217,6 +217,8 @@ class FileHandler(object):
             return
         if os.path.exists(local_filename) and force:
             logging.info('File {} already exists. Overwriting...'.format(local_filename))
+        else:
+            logging.info('File {} does not exist. Downloading...'.format(local_filename))
 
         Path(os.path.dirname(local_filename)).mkdir(parents=True, exist_ok=True)
 
