@@ -20,7 +20,7 @@ class SVCT(BaseEstimator):
 
     def fit(self, X, y):
         """
-        Empty function, logical model doesn't need any training
+        Fit in two phases
         """
 
         X1 = X
@@ -34,11 +34,11 @@ class SVCT(BaseEstimator):
 
         if self.verbose:
             logging.info('Fitting model 1...')
-        self.model1.fit(X1, y1)
+        self.model1.fit(X1.values, y1)
 
         if self.verbose:
             logging.info('Fitting model 2...')
-        self.model2.fit(X2, y2)
+        self.model2.fit(X2.values, y2)
 
         return self
 
