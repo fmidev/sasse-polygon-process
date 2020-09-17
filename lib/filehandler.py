@@ -109,13 +109,13 @@ class FileHandler(object):
         """
         Load SVCT
         """
-        logging.info('Loading model from {}...'.format(savepath))
+        logging.info('Loading model from {}...'.format(save_path))
         fname1 = save_path + '/model1.joblib'
         self._download_from_bucket(fname1, fname1, force=force)
         model1 = load(fname1)
 
         fname2 = save_path + '/model2.joblib'
-        self._download_from_bucket(fname1, fname1, force=force)
+        self._download_from_bucket(fname2, fname2, force=force)
         model2 = load(fname2)
 
         model = SVCT()
