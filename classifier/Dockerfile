@@ -20,7 +20,4 @@ RUN pip install pyproj pandas shapely geopandas dask_ml joblib==0.15.1 scikit-le
 EXPOSE 5432
 EXPOSE 80
 
-ENV AWS_ACCESS_KEY_ID="AKIAWXFLW2HB3XPPB7ML"
-ENV AWS_SECRET_ACCESS_KEY="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"
-
 CMD [ "python", "./" ]
