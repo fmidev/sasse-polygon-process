@@ -55,7 +55,7 @@ if __name__ =='__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--example_config_file', type=str, default='cnf/examples.yaml', help='Example setup filename')
-    parser.add_argument('--db_config_file', type=str, default='cnf/sasse_aws.yaml', help='CNF file containing DB connection pararemters')
+    parser.add_argument('--db_config_file', type=str, default='cnf/sasse_aws.ini', help='CNF file containing DB connection pararemters')
     parser.add_argument('--db_config_name', type=str, default='production', help='Section name in db cnf file to read connection parameters')
     parser.add_argument('--bucket', type=str, default='fmi-asi-sasse-assets', help='Bucket name where models are stored')
     parser.add_argument('--param_config_file', type=str, default='cnf/smartmet.yaml', help='Param config filename')
