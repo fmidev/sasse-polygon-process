@@ -14,6 +14,9 @@ RUN pip install pyproj pandas shapely geopandas dask_ml joblib==0.15.1 scikit-le
 
 # pip install --upgrade pyproj pandas shapely geopandas dask_ml joblib scikit-learn==0.22.2.post1 dask[dataframe]==2.12.0 distributed==2.12.0 lz4==3.0.2 blosc==1.8.3 cloudpickle==1.3.0 msgpack==1.0.0 numpy==1.18.1 toolz==0.10.0 tornado==6.0.4
 
+RUN mkdir /root/.aws
+COPY cnf/credentials /root/.aws/
+
 EXPOSE 5432
 EXPOSE 80
 
