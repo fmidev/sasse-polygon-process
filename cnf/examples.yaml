@@ -2,63 +2,63 @@ examples:
   -
     starttime: 2011-12-26T00:00:00Z
     endtime: 2011-12-28T00:00:00Z
-    output_dir: examples/national/thin/random/tapani-hannu
+    output_dir: examples2/national/thin/random/tapani-hannu
     dataset_file: data/energiateollisuus_random_15_thin_test.csv
-    model_file: models/svc/energiateollisuus/thin/recent/model.joblib
+    model_file: models/gp/national_random/thin/model.joblib
     scaler_file: models/scaler/energiateollisuus_random_15_thin.joblib
   -
     starttime: 2016-08-27T00:00:00Z
     endtime: 2016-08-28T00:00:00Z
-    output_dir: examples/national/thin/random/rauli
+    output_dir: examples2/national/thin/random/rauli
     dataset_file: data/energiateollisuus_random_15_thin_test.csv
-    model_file: models/svc/energiateollisuus/thin/recent/model.joblib
+    model_file: models/gp/national_random/thin/model.joblib
     scaler_file: models/scaler/energiateollisuus_random_15_thin.joblib
   -
     starttime: 2013-12-13T00:00:00Z
     endtime: 2013-12-14T00:00:00Z
-    output_dir: examples/national/thin/random/seija
+    output_dir: examples2/national/thin/random/seija
     dataset_file: data/energiateollisuus_random_15_thin_test.csv
-    model_file: models/svc/energiateollisuus/thin/recent/model.joblib
+    model_file: models/gp/national_random/thin/model.joblib
     scaler_file: models/scaler/energiateollisuus_random_15_thin.joblib
   -
     starttime: 2013-11-17T00:00:00Z
     endtime: 2013-11-18T00:00:00Z
-    output_dir: examples/national/thin/random/eino
+    output_dir: examples2/national/thin/random/eino
     dataset_file: data/energiateollisuus_random_15_thin_test.csv
-    model_file: models/svc/energiateollisuus/thin/recent/model.joblib
+    model_file: models/gp/national_random/thin/model.joblib
     scaler_file: models/scaler/energiateollisuus_random_15_thin.joblib
   -
     starttime: 2018-06-22T00:00:00Z
     endtime: 2018-06-23T00:00:00Z
-    output_dir: examples/national/thin/random/pauliina
+    output_dir: examples2/national/thin/random/pauliina
     dataset_file: data/energiateollisuus_random_15_thin_test.csv
-    model_file: models/svc/energiateollisuus/thin/recent/model.joblib
+    model_file: models/gp/national_random/thin/model.joblib
     scaler_file: models/scaler/energiateollisuus_random_15_thin.joblib
   -
     starttime: 2018-06-04T00:00:00Z
     endtime: 2018-06-05T00:00:00Z
-    output_dir: examples/national/thin/random/toivo
+    output_dir: examples2/national/thin/random/toivo
     dataset_file: data/energiateollisuus_random_15_thin_test.csv
-    model_file: models/svc/energiateollisuus/thin/recent/model.joblib
+    model_file: models/gp/national_random/thin/model.joblib
     scaler_file: models/scaler/energiateollisuus_random_15_thin.joblib
   -
     starttime: 2010-09-03T00:00:00Z
     endtime: 2010-09-04T00:00:00Z
-    output_dir: examples/national/thin/recent
+    output_dir: examples2/national/thin/recent
     dataset_file: data/energiateollisuus_recent_15_thin_test.csv
-    model_file: models/svc/energiateollisuus/thin/recent/model.joblib
+    model_file: models/gp/national_random/thin/model.joblib
     scaler_file: models/scaler/energiateollisuus_recent_15_thin.joblib
   -
     starttime: 2010-10-15T00:00:00Z
     endtime: 2010-10-16T00:00:00Z
-    output_dir: examples/national/thin/recent
+    output_dir: examples2/national/thin/recent
     dataset_file: data/energiateollisuus_recent_15_thin_test.csv
-    model_file: models/svc/energiateollisuus/thin/recent/model.joblib
+    model_file: models/gp/national_random/thin/model.joblib
     scaler_file: models/scaler/energiateollisuus_recent_15_thin.joblib
   -
     starttime: 2010-11-09T00:00:00Z
     endtime: 2010-11-10T00:00:00Z
-    output_dir: examples/national/thin/recent
+    output_dir: examples2/national/thin/recent
     dataset_file: data/energiateollisuus_recent_15_thin_test.csv
-    model_file: models/svc/energiateollisuus/thin/recent/model.joblib
+    model_file: models/gp/national_random/thin/model.joblib
     scaler_file: models/scaler/energiateollisuus_recent_15_thin.joblib
