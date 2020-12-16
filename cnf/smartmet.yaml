@@ -131,7 +131,7 @@ forest_params_db:
       - "@mean"
       - "@max"
       - "@std"
-  XX:
+  FORESTTYPE:Forest:90001::0:0::
     name: Forest site fertility
     aggregation:
       - "@mean"
@@ -154,7 +154,7 @@ forest_params_db:
     aggregation:
       - "@mean"
       - "@max"
-      - "@std"  
+      - "@std"
   FORESTLENGTH:Forest:90001::0:0:
     name: Forest stand mean height
     aggregation:
